@@ -5,7 +5,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
+import openpyxl
 
 # this is the image processing we need to do an image before we use tesartct to optimze it
 # image = cv2.imread('POC_sample2_withnoise.tif', 0)
@@ -63,16 +63,16 @@ def plot_preprocess_images(image, blurred, thresholded):
 
 # plot_preprocess_images(image,blurred,thresholded)
 
-def read_txt_to_csv(im, filename):
-    global writer, line
-    text = pytesseract.image_to_string(im, lang='heb')
-
-    print(text, "\n")
-    with open(filename + 'output.csv', 'w', newline='') as th_csvfile:
-        writer = csv.writer(th_csvfile)
-        for line in text.split('\n'):
-            if line != "":
-                writer.writerow([line])
+# def read_txt_to_csv(im, filename):
+#     global writer, line
+#     text = pytesseract.image_to_string(im, lang='heb')
+#
+#     print(text, "\n")
+#     with open(filename + 'output.csv', 'w', newline='') as th_csvfile:
+#         writer = csv.writer(th_csvfile)
+#         for line in text.split('\n'):
+#             if line != "":
+#                 writer.writerow([line])
 
 
 # read_txt_to_csv(image, "image.")
@@ -133,7 +133,7 @@ def read_txt_to_csv(im, filename):
 # cv2.waitKey(0)
 # read_txt_to_csv(warped, "testnewcode")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-DATABASE_PATH = r"C:\Users\yarin\PycharmProjects\DHC\GnazimProject\כרטסת עיתונות, גנזים - א - ל\ח - ל"
+DATABASE_PATH = r"C:\Users\yarin\PycharmProjects\DHC\GnazimProject\כרטסת עיתונות, גנזים - א - ל\ח - ל\\0001"
 import re
 
 
@@ -158,11 +158,9 @@ def find_cd_label(string):
 #  file 2. break the file path name to column data
 #  3. add the text that was read from the image to a text column
 #  4. count number of images in each folder name
-data_col_names = ['Identifier', 'Path', 'File Name', 'Author Subject', 'Type', "Author Type Count", 'Years',
-                  'Scanned Text']
-data = pd.DataFrame(columns=data_col_names)
-problem_folders = []
-cnt = 0
+# data_col_names = ['Identifier', 'Path', 'File Name', 'Author Subject', 'Type', "Author Type Count", 'Years',
+#                   'Scanned Text']
+# data = pd.DataFrame(columns=data_col_names)
 
 
 def extract_text(path):
@@ -174,49 +172,158 @@ def extract_text(path):
     return ocr_text
 
 
-for dirpath, foldernames, filesname in os.walk(DATABASE_PATH):  # search in database folder
+#
+# for dirpath, foldernames, filesname in os.walk(DATABASE_PATH):  # search in database folder
+#     if len(filesname) > 0:
+#         index = dirpath.find("GnazimProject")
+#         if index != -1:
+#             new_data = dict.fromkeys(data_col_names, "")
+#             new_data["Author Type Count"] = len(filesname)
+#             new_data["Path"] = dirpath[index + len("GnazimProject") + 1:]
+#             preprocessed_dirpath = dirpath[index + len("GnazimProject") + 1:].split("\\")
+#             preprocessed_dirpath.pop(0)
+#             for i, string in enumerate(reversed(preprocessed_dirpath)):
+#                 preprocessed_str = string.replace(find_cd_label(string), '')
+#                 years = find_four_digit_substring(preprocessed_str)
+#                 preprocessed_str = preprocessed_str.replace(years, '')
+#                 if new_data["Years"] == "" and years != "":
+#                     new_data["Years"] = years
+#                 if len(preprocessed_str) > 2 and "," in preprocessed_str and new_data["Type"] == "" and i == 0:
+#                     if preprocessed_str.count("-") > 0:
+#                         split_strings = [s.strip() for s in preprocessed_str.split("-", 1)]
+#                         new_data["Type"] = next(s for s in split_strings if "," not in s)
+#                         new_data["Author Subject"] = next(
+#                             s for s in split_strings if s != new_data["Type"] and "," in s)
+#                     elif new_data["Author Subject"] == "":
+#                         new_data['Author Subject'] = preprocessed_str.strip()
+#             if new_data['Author Subject'] == "":
+#                 for string in foldernames:
+#                     if string.count("-") > 0 and new_data['Author Subject'] == "":
+#                         new_data["Author Subject"] = [s.strip() for s in string.split("-", 1)].pop(0)
+#                     # if "-" in string and new_data['Author Subject'] == "":
+#                     #     new_data['Author Subject'] = [s.strip() for s in string.split("-")][0]
+#             for name in filesname:
+#                 if name.endswith("tif"):
+#                     cnt += 1
+#                     new_data["Identifier"] = cnt
+#                     new_data["File Name"] = name
+#
+#                     image_path = new_data["Path"] + "\\" + new_data["File Name"]
+#                     new_data["Scanned Text"] = extract_text(image_path)
+#
+#                     df = pd.DataFrame(new_data, index=[0])  # specify the index explicitly
+#                     data = data.append(df, ignore_index=True)  # assign the updated dataframe to data
+#         else:
+#             problem_folders.append(dirpath)
+def get_count(df):
+    if len(df) == 0:
+        return 0
+    else:
+        return df['Identifier'].max()
+
+
+def extract_years_auther_type(preprocessed_dirpath, foldernames):
+    years, author_subject, type_subject = "", "", ""
+    for i, string in enumerate(reversed(preprocessed_dirpath)):
+        preprocessed_str = string.replace(find_cd_label(string), '')
+        years_candidate = find_four_digit_substring(preprocessed_str)
+        if years == "" and years_candidate != "":
+            years = years_candidate
+
+        preprocessed_str = preprocessed_str.replace(years, '')
+        if len(preprocessed_str) > 1 and "," in preprocessed_str and type_subject == "" and i == 0:
+            if preprocessed_str.count("-") > 0:
+                split_strings = [s.strip() for s in preprocessed_str.split("-", 1)]
+                type_subject = next(s for s in split_strings if "," not in s)
+                author_subject = next(s for s in split_strings if s != type_subject and "," in s)
+            elif author_subject == "":
+                author_subject = preprocessed_str.strip()
+    if author_subject == "":
+        for string in foldernames:
+            if string.count("-") > 0 and author_subject == "":
+                author_subject = [s.strip() for s in string.split("-", 1)].pop(0)
+            # if "-" in string and new_data['Author Subject'] == "":
+            #     new_data['Author Subject'] = [s.strip() for s in string.split("-")][0]
+    return years, author_subject, type_subject
+
+
+data_col_names = ['Identifier', 'Path', 'File Name', 'Author Subject', 'Type', "Author Type Count",
+                  'Years', 'Scanned Text']
+
+
+def process_folder(dirpath, foldernames, filesname):
+    """
+    Process the files in a folder and add them to the dataframe
+    """
+    unsuccessful_folder = ""
     if len(filesname) > 0:
-        index = dirpath.find("GnazimProject")
-        if index != -1:
-            new_data = dict.fromkeys(data_col_names, "")
-            new_data["Author Type Count"] = len(filesname)
-            new_data["Path"] = dirpath[index + len("GnazimProject") + 1:]
-            preprocessed_dirpath = dirpath[index + len("GnazimProject") + 1:].split("\\")
-            preprocessed_dirpath.pop(0)
-            for i, string in enumerate(reversed(preprocessed_dirpath)):
-                preprocessed_str = string.replace(find_cd_label(string), '')
-                years = find_four_digit_substring(preprocessed_str)
-                preprocessed_str = preprocessed_str.replace(years, '')
-                if new_data["Years"] == "" and years != "":
-                    new_data["Years"] = years
-                if len(preprocessed_str) > 2 and "," in preprocessed_str and new_data["Type"] == "" and i == 0:
-                    if preprocessed_str.count("-") > 0:
-                        split_strings = [s.strip() for s in preprocessed_str.split("-", 1)]
-                        new_data["Type"] = next(s for s in split_strings if "," not in s)
-                        new_data["Author Subject"] = next(
-                            s for s in split_strings if s != new_data["Type"] and "," in s)
-                    elif new_data["Author Subject"] == "":
-                        new_data['Author Subject'] = preprocessed_str.strip()
-            if new_data['Author Subject'] == "":
-                for string in foldernames:
-                    if string.count("-") > 0 and new_data['Author Subject'] == "":
-                        new_data["Author Subject"] = [s.strip() for s in string.split("-", 1)].pop(0)
-                    # if "-" in string and new_data['Author Subject'] == "":
-                    #     new_data['Author Subject'] = [s.strip() for s in string.split("-")][0]
-            for name in filesname:
-                if name.endswith("tif"):
-                    cnt += 1
-                    new_data["Identifier"] = cnt
-                    new_data["File Name"] = name
+        try:
+            index = dirpath.find("GnazimProject")
+            if index != -1:
+                data = folder_to_df(dirpath, filesname, foldernames, index)
+                with pd.ExcelWriter('YarinGnazimDB.xlsx') as writer:
+                    data.to_excel(writer, index=False, sheet_name='Sheet1')
+            else:
+                raise Exception(f"~~~~~~~\nError! Problem in folder:\n{dirpath}\n~~~~~~~")
+        except:
+            unsuccessful_folder = dirpath
+    return unsuccessful_folder
 
-                    image_path = new_data["Path"] + "\\" + new_data["File Name"]
-                    new_data["Scanned Text"] = extract_text(image_path)
 
-                    df = pd.DataFrame(new_data, index=[0])  # specify the index explicitly
-                    data = data.append(df, ignore_index=True)  # assign the updated dataframe to data
-        else:
-            problem_folders.append(dirpath)
-    a = 3
+def folder_to_df(dirpath, filesname, foldernames, index):
+    data = get_data()
+    new_data = dict.fromkeys(data_col_names, "")
+    processed_path = dirpath[index + len("GnazimProject") + 1:].split("\\")
+    processed_path.pop(0)
+    new_data["Years"], new_data["Author Subject"], new_data["Type"] = extract_years_auther_type(
+        processed_path,
+        foldernames)
+    new_data["Author Type Count"] = len(filesname)
+    new_data["Path"] = dirpath[index + len("GnazimProject") + 1:]
+    for name in filesname:
+        if name.endswith("tif"):
+            cnt = get_count(data)
+            cnt += 1
+            new_data["Identifier"] = cnt
+            new_data["File Name"] = name
+            image_path = new_data["Path"] + "\\" + new_data["File Name"]
+            new_data["Scanned Text"] = extract_text(image_path)
+            new_row = pd.DataFrame(new_data, index=[0])  # specify the index explicitly
+            data = pd.concat([data,new_row], axis=0)  # assign the updated dataframe to data
+    return data
 
-# with pd.ExcelWriter('GnazimDB.xlsx') as writer:
-#      data.to_excel(writer, index=False, sheet_name='Sheet1')
+
+def get_data():
+    if os.path.isfile("YarinGnazimDB.xlsx"):
+        df = pd.read_excel("YarinGnazimDB.xlsx")
+        df.fillna('', inplace=True)
+    else:
+        df = pd.DataFrame(columns=data_col_names)
+    return df
+
+
+# def get_problem_data():
+#     if os.path.isfile("YarinProblemsGnazimDB.xlsx"):
+#         df = pd.read_excel("YarinProblemsGnazimDB.xlsx")
+#     else:
+#         df = pd.DataFrame(columns=["Problem Folders Names "])
+#     return df
+
+
+def process_database_folder(path):
+    """
+    Process the files in the database folder
+    """
+    problem_folders = []
+    for dirpath, foldernames, filesname in os.walk(path):
+        new_problem_folder = process_folder(dirpath, foldernames, filesname)
+        print(f"\n~Finished Folder Name {dirpath}!~")
+        if new_problem_folder:
+            problem_folders.append(new_problem_folder)
+    problem_df = pd.DataFrame(problem_folders,columns=["Problem Folders Names "], index=[0])
+    with pd.ExcelWriter('YarinProblemsGnazimDB.xlsx') as writer:
+        problem_df.to_excel(writer, index=False, sheet_name='Sheet1')
+    print("\n~process_database_folder DONE!~")
+
+
+process_database_folder(DATABASE_PATH)
