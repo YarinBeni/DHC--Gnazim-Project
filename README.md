@@ -6,7 +6,7 @@ The archive contains about 800 archival collections of writers, poets, playwrigh
 The archive includes manuscripts, letters, various personal documents, photos, and a unique recording collection.
 
 ## Project Goals
-The goal of the project is to extract metadata and Hebrew text from the 180,000 scanned images in the Ganazim Institute archive. We aim to achieve this using OCR Pytesseract model in Python, along with NLP and image processing methods.
+The goal of the project is to extract metadata and Hebrew text from the 180,000 scanned images in the Ganazim Institute archive and make it accessible for research and work.
 
 ## Methods
 In this project, we have utilized a number of methods to extract and analyze Hebrew text from scanned images of historical documents in the Ganazim Institute archive. Our primary tool for extracting text from these images is the OCR Pytesseract model in Python, which is able to accurately recognize Hebrew characters.
