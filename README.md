@@ -9,9 +9,6 @@ The archive includes manuscripts, letters, various personal documents, photos, a
 The goal of the project is to extract metadata and Hebrew text from the 180,000 scanned images in the Ganazim Institute archive. We aim to achieve this using OCR Pytesseract model in Python, along with NLP and image processing methods.
 
 ## Methods
-We are using OCR Pytesseract model in Python, along with NLP and image processing methods, to extract metadata and Hebrew text from the scanned images in the Ganazim Institute archive.
-
-## Methods
 In this project, we have utilized a number of methods to extract and analyze Hebrew text from scanned images of historical documents in the Ganazim Institute archive. Our primary tool for extracting text from these images is the OCR Pytesseract model in Python, which is able to accurately recognize Hebrew characters.
 To improve the accuracy of our OCR model, we have employed various image processing techniques using OpenCV, including GaussianBlur and Otsu thresholding. These methods help to enhance the quality of the scanned images and ensure that the text is extracted as accurately as possible.
 In addition to extracting the text from the scanned images, we have also used a pandas dataframe as a data structure for extracting metadata from the Google Cloud folder structures and names. This has allowed us to efficiently organize and analyze the data from the archive, and create a CSV file containing all of the extracted data.
