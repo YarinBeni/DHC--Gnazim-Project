@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import openpyxl
 
+
 # this is the image processing we need to do an image before we use tesartct to optimze it
 # image = cv2.imread('POC_sample2_withnoise.tif', 0)
 # blurred = cv2.GaussianBlur(image, (5, 5), 0)
@@ -133,7 +134,7 @@ def plot_preprocess_images(image, blurred, thresholded):
 # cv2.waitKey(0)
 # read_txt_to_csv(warped, "testnewcode")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-DATABASE_PATH = r"C:\Users\yarin\PycharmProjects\DHC\GnazimProject\כרטסת עיתונות, גנזים - א - ל\ח - ל\\0001"
+DATABASE_PATH = r"C:\Users\yarin\PycharmProjects\DHC\GnazimProject\כרטסת עיתונות, גנזים - א - ל"
 import re
 
 
@@ -158,10 +159,6 @@ def find_cd_label(string):
 #  file 2. break the file path name to column data
 #  3. add the text that was read from the image to a text column
 #  4. count number of images in each folder name
-# data_col_names = ['Identifier', 'Path', 'File Name', 'Author Subject', 'Type', "Author Type Count", 'Years',
-#                   'Scanned Text']
-# data = pd.DataFrame(columns=data_col_names)
-
 
 def extract_text(path):
     # How to load image with english and hebrew path:
@@ -172,49 +169,6 @@ def extract_text(path):
     return ocr_text
 
 
-#
-# for dirpath, foldernames, filesname in os.walk(DATABASE_PATH):  # search in database folder
-#     if len(filesname) > 0:
-#         index = dirpath.find("GnazimProject")
-#         if index != -1:
-#             new_data = dict.fromkeys(data_col_names, "")
-#             new_data["Author Type Count"] = len(filesname)
-#             new_data["Path"] = dirpath[index + len("GnazimProject") + 1:]
-#             preprocessed_dirpath = dirpath[index + len("GnazimProject") + 1:].split("\\")
-#             preprocessed_dirpath.pop(0)
-#             for i, string in enumerate(reversed(preprocessed_dirpath)):
-#                 preprocessed_str = string.replace(find_cd_label(string), '')
-#                 years = find_four_digit_substring(preprocessed_str)
-#                 preprocessed_str = preprocessed_str.replace(years, '')
-#                 if new_data["Years"] == "" and years != "":
-#                     new_data["Years"] = years
-#                 if len(preprocessed_str) > 2 and "," in preprocessed_str and new_data["Type"] == "" and i == 0:
-#                     if preprocessed_str.count("-") > 0:
-#                         split_strings = [s.strip() for s in preprocessed_str.split("-", 1)]
-#                         new_data["Type"] = next(s for s in split_strings if "," not in s)
-#                         new_data["Author Subject"] = next(
-#                             s for s in split_strings if s != new_data["Type"] and "," in s)
-#                     elif new_data["Author Subject"] == "":
-#                         new_data['Author Subject'] = preprocessed_str.strip()
-#             if new_data['Author Subject'] == "":
-#                 for string in foldernames:
-#                     if string.count("-") > 0 and new_data['Author Subject'] == "":
-#                         new_data["Author Subject"] = [s.strip() for s in string.split("-", 1)].pop(0)
-#                     # if "-" in string and new_data['Author Subject'] == "":
-#                     #     new_data['Author Subject'] = [s.strip() for s in string.split("-")][0]
-#             for name in filesname:
-#                 if name.endswith("tif"):
-#                     cnt += 1
-#                     new_data["Identifier"] = cnt
-#                     new_data["File Name"] = name
-#
-#                     image_path = new_data["Path"] + "\\" + new_data["File Name"]
-#                     new_data["Scanned Text"] = extract_text(image_path)
-#
-#                     df = pd.DataFrame(new_data, index=[0])  # specify the index explicitly
-#                     data = data.append(df, ignore_index=True)  # assign the updated dataframe to data
-#         else:
-#             problem_folders.append(dirpath)
 def get_count(df):
     if len(df) == 0:
         return 0
@@ -289,7 +243,7 @@ def folder_to_df(dirpath, filesname, foldernames, index):
             image_path = new_data["Path"] + "\\" + new_data["File Name"]
             new_data["Scanned Text"] = extract_text(image_path)
             new_row = pd.DataFrame(new_data, index=[0])  # specify the index explicitly
-            data = pd.concat([data,new_row], axis=0)  # assign the updated dataframe to data
+            data = pd.concat([data, new_row], axis=0)  # assign the updated dataframe to data
     return data
 
 
@@ -315,12 +269,17 @@ def process_database_folder(path):
     Process the files in the database folder
     """
     problem_folders = []
+    folder_cnt = 0
+    prob_cnt =0
     for dirpath, foldernames, filesname in os.walk(path):
         new_problem_folder = process_folder(dirpath, foldernames, filesname)
-        print(f"\n~Finished Folder Name {dirpath}!~")
+        print(f"\n~~~Finished Folder Number {folder_cnt} , Name {dirpath}!~")
+        folder_cnt += 1
         if new_problem_folder:
+            print(f"\nXXX Problem Folder Number {prob_cnt} , Name {dirpath}!~")
+            prob_cnt+=1
             problem_folders.append(new_problem_folder)
-    problem_df = pd.DataFrame(problem_folders,columns=["Problem Folders Names "], index=[0])
+    problem_df = pd.DataFrame(problem_folders, columns=["Problem Folders Names "], index=[0])
     with pd.ExcelWriter('YarinProblemsGnazimDB.xlsx') as writer:
         problem_df.to_excel(writer, index=False, sheet_name='Sheet1')
     print("\n~process_database_folder DONE!~")
