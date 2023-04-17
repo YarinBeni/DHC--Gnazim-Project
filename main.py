@@ -270,19 +270,57 @@ def process_database_folder(path):
     """
     problem_folders = []
     folder_cnt = 0
-    prob_cnt =0
+    prob_cnt = 0
     for dirpath, foldernames, filesname in os.walk(path):
         new_problem_folder = process_folder(dirpath, foldernames, filesname)
         print(f"\n~~~Finished Folder Number {folder_cnt} , Name {dirpath}!~")
         folder_cnt += 1
         if new_problem_folder:
             print(f"\nXXX Problem Folder Number {prob_cnt} , Name {dirpath}!~")
-            prob_cnt+=1
+            prob_cnt += 1
             problem_folders.append(new_problem_folder)
     problem_df = pd.DataFrame(problem_folders, columns=["Problem Folders Names "], index=[0])
     with pd.ExcelWriter('YarinProblemsGnazimDB.xlsx') as writer:
         problem_df.to_excel(writer, index=False, sheet_name='Sheet1')
     print("\n~process_database_folder DONE!~")
 
+# process_database_folder(DATABASE_PATH)
 
-process_database_folder(DATABASE_PATH)
+
+# Gnazim Project projectid: gnazim-project
+
+from pydrive2.auth import GoogleAuth
+from pydrive2.drive import GoogleDrive
+folder_id = "1sciJWxtjAxbas-fyxuIiXPANOXGxectN"
+gauth = GoogleAuth()
+gauth.LocalWebserverAuth() # Creates local webserver and auto handles authentication.
+drive = GoogleDrive(gauth)
+
+
+dff_col_names = [ 'Path', 'File id']
+dff = pd.DataFrame(columns=dff_col_names)
+
+
+def print_files_in_folder(folder_id,data,folder_title=""):
+    # search for files in the folder
+    file_list = drive.ListFile({'q': "'%s' in parents and trashed=false" % folder_id}).GetList()
+
+    # print the name and ID of each file in the folder that ends with .tif
+    for file1 in file_list:
+        current_folder_title=folder_title+"\\"+file1['title']
+        if file1['title'].endswith('.tif'):
+            #print('directory path: %s ----- id: %s' % (current_folder_title, file1['id']))
+            new_data = dict.fromkeys(dff_col_names, "")
+            new_data["Path"]=current_folder_title
+            new_data["File id"]=file1['id']
+            new_row = pd.DataFrame(new_data, index=[0])
+            data = pd.concat([data, new_row], axis=0)
+            print(current_folder_title)
+
+        else:
+            print()
+            print_files_in_folder(file1['id'],data,current_folder_title)
+
+
+
+print_files_in_folder(folder_id,dff,"")
