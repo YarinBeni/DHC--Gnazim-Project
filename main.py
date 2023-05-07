@@ -5,7 +5,6 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import openpyxl
 
 
 # this is the image processing we need to do an image before we use tesartct to optimze it
@@ -284,43 +283,124 @@ def process_database_folder(path):
         problem_df.to_excel(writer, index=False, sheet_name='Sheet1')
     print("\n~process_database_folder DONE!~")
 
+
 # process_database_folder(DATABASE_PATH)
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Gnazim Project projectid: gnazim-project
+import urllib.request
 
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
+from PIL import Image
 folder_id = "1sciJWxtjAxbas-fyxuIiXPANOXGxectN"
 gauth = GoogleAuth()
-gauth.LocalWebserverAuth() # Creates local webserver and auto handles authentication.
+gauth.LocalWebserverAuth()  # Creates local webserver and auto handles authentication.
 drive = GoogleDrive(gauth)
 
-
-dff_col_names = [ 'Path', 'File id']
+dff_col_names = ['Path', 'File id']
 dff = pd.DataFrame(columns=dff_col_names)
 
 
-def print_files_in_folder(folder_id,data,folder_title=""):
+def gcp_extract_text(data):
+    file_id = data["File id"]
+    # Download the file using PyDrive2
+    file = drive.CreateFile({'id': file_id})
+    file.GetContentFile("testname")
+    # Load the downloaded file into a cv2 image in grayscale
+    img_cv2 = cv2.imread("testname", cv2.IMREAD_GRAYSCALE)
+
+    # Apply Gaussian blur and thresholding
+    blurred = cv2.GaussianBlur(img_cv2, (5, 5), 0)
+    _, thresholded = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+    # Perform OCR and return the extracted text
+    ocr_text = re.sub(r'\n+', ' ', pytesseract.image_to_string(thresholded, lang='heb'))
+    return ocr_text
+
+
+
+
+def gcp_extract_years_auther_type(preprocessed_dirpath):
+    years, author_subject, type_subject = "", "", ""
+    for i, string in enumerate(reversed(preprocessed_dirpath)):
+        preprocessed_str = string.replace(find_cd_label(string), '')
+        years_candidate = find_four_digit_substring(preprocessed_str)
+        if years == "" and years_candidate != "":
+            years = years_candidate
+
+        preprocessed_str = preprocessed_str.replace(years, '')
+        if len(preprocessed_str) > 1 and "," in preprocessed_str and type_subject == "" and i == 0:
+            if preprocessed_str.count("-") > 0:
+                split_strings = [s.strip() for s in preprocessed_str.split("-", 1)]
+                type_subject = next(s for s in split_strings if "," not in s)
+                author_subject = next(s for s in split_strings if s != type_subject and "," in s)
+            elif author_subject == "":
+                author_subject = preprocessed_str.strip()
+
+    return years, author_subject, type_subject
+
+
+def gcp_folder_to_df(new_data):
+    big_data = get_data()
+    processed_path = new_data["Path"].split("\\")
+    processed_path.pop(0)
+    new_data["Years"], new_data["Author Subject"], new_data["Type"] = gcp_extract_years_auther_type(
+        processed_path)
+
+    cnt = get_count(big_data)
+    cnt += 1
+    new_data["Identifier"] = f"IDGNAZIM000{cnt}"
+    new_data["Scanned Text"] = gcp_extract_text(new_data)
+    new_row = pd.DataFrame(new_data, index=[0])  # specify the index explicitly
+    big_data = pd.concat([big_data, new_row], axis=0)  # assign the updated dataframe to data
+    return big_data
+
+
+def print_files_in_folder(folder_id, folder_title=""):
     # search for files in the folder
     file_list = drive.ListFile({'q': "'%s' in parents and trashed=false" % folder_id}).GetList()
-
+    sample_cnt = 0
     # print the name and ID of each file in the folder that ends with .tif
     for file1 in file_list:
-        current_folder_title=folder_title+"\\"+file1['title']
+        current_folder_title = folder_title + "\\" + file1['title']
         if file1['title'].endswith('.tif'):
-            #print('directory path: %s ----- id: %s' % (current_folder_title, file1['id']))
+            sample_cnt += 1
+            # print('directory path: %s ----- id: %s' % (current_folder_title, file1['id']))
             new_data = dict.fromkeys(dff_col_names, "")
-            new_data["Path"]=current_folder_title
-            new_data["File id"]=file1['id']
-            new_row = pd.DataFrame(new_data, index=[0])
-            data = pd.concat([data, new_row], axis=0)
-            print(current_folder_title)
+            new_data["Path"] = current_folder_title
+            new_data["File id"] = file1['id']
+            # new_row = pd.DataFrame(new_data, index=[0])
+            # Extracting the actual folder ID and actual file name and saving them in the new_data dictionary
+            new_data["actual_folder_id"] = file1['parents'][0]['id']
+            new_data["actual_file_name"] = file1['title']
+            print(f"File Path: {current_folder_title}\nFile Title: {file1['title']}\n")
+            new_d = gcp_folder_to_df(new_data)
+            a = 3
+
 
         else:
             print()
-            print_files_in_folder(file1['id'],data,current_folder_title)
+            print()
+            print()
+            print_files_in_folder(file1['id'], current_folder_title)
 
 
+print_files_in_folder(folder_id, "")
 
-print_files_in_folder(folder_id,dff,"")
+
+# todo: Now the code is able to traverse cloud, download image, ocr it, and fill newdata as before, now need to:
+#  1) move get_data call to main function and adjust functions maybe as a class and class var 
+#  2) need to write the newdata into the updated csv table
+#  3) to do try expect as in the local case code so if some artibutes will fail to record problem files and folders.
+
+
+# todo: 1) make the code oop to fix the save to dff problem in the GCP code
+#  2) finish the code for GCP and create a full csv for dataset
+#  3) refine ocr and parsed text in csv with implemented algorithms in open refine such as edit distance etc
+#  4) find way to improve ocr with bagging with other models , need to set a meeting with dicta people
+#  5) find way to classify handwriting and typed (models probabilties? length of word? number of symbolys insted of letters?)
+#  6) create an sql database online?
+#  *) test performance of ocr auther name with the label from the a confusion matrix
+#  important for me to know from yael: 1) what is the timeline of the project, 2) what is the project goal, 3) can we get a paper from it ?
