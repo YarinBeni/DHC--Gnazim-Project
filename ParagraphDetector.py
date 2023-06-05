@@ -31,11 +31,9 @@ def rlsa(image, threshold):
 
 
 
-# Load image, grayscale, Gaussian blur, Otsu's threshold
-#image = cv2.imread('POC_sample3_handwriten.tif', 0) # Hand Writen Example
+# Load image To run Paragraph Detector:
 image = cv2.imread('POC_sample2_withnoise.tif', 0) #  Digital Typed Example
-#image=cv2.imread('SAMPLE_Long_Author04.tif',0)
-#image = cv2.imread('POC_sample5_withnoise_Author.tif', 0) # Digital Typed Example
+
 
 def get_paragraph_boundingbox():
     global cropped_images, cropped
