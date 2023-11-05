@@ -1,0 +1,15 @@
+,Total Time,Calls,Run Timestamp
+run,22441.39694,1,11.5.2023
+get_data,14564.28374,9117,11.5.2023
+gcp_process_files_in_folder,11473.01036,3037,11.5.2023
+gcp_process_file,6249.365994,3004,11.5.2023
+gcp_extract_text_from_image,6246.579573,3004,11.5.2023
+gcp_reconnect,181.1079997,3,11.5.2023
+establish_connection,11.175472,1,11.5.2023
+gcp_extract_years_author_type,0.2526011,3004,11.5.2023
+is_not_file,0.1511045,18007,11.5.2023
+find_four_digit_substring,0.1408815,9012,11.5.2023
+get_count,0.087415,6080,11.5.2023
+find_cd_label,0.053822,9012,11.5.2023
+is_image,0.018054,21011,11.5.2023
+is_path_processed,0.0032791,3004,11.5.2023
