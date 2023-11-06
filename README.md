@@ -10,7 +10,7 @@ The archive includes manuscripts, letters, various personal documents, photos, a
   <img src="https://github.com/YarinBeni/DHC--Gnazim-Project/blob/main/data_images_examples/POC_sample3_handwriten.png?raw=true" width="350" height="250" alt="Handwritten OCR Sample Image" />
 </p>
 
-*Figures: Displayed above are two contrasting examples of the data from the Ganazim Institute's archive. The first image is a relatively clean document, reflecting the best-case scenario for text extraction via OCR. The second is a handwritten document with a higher degree of complexity, indicative of the varied handwriting styles present in the collection. Despite the apparent structure in many documents, our project also contends with materials that have significant noise, including those with a mix of typewritten and handwritten text. These samples underscore the diversity of challenges we face as we work to digitize the extensive archive of Hebrew literature, dating from the late 19th century to the modern era.*
+*Figures: Displayed above are two contrasting examples of the data from the Ganazim Institute's archive. The first image is a relatively clean document, reflecting the best-case scenario for text extraction via OCR. The second is a handwritten document with a higher degree of complexity, indicative of the varied handwriting styles present in the collection.*
 
 
 
