@@ -5,6 +5,14 @@ The Ganazim Institute is a literary research institute that contains the largest
 The archive contains about 800 archival collections of writers, poets, playwrights, thinkers, editors, and writers from the end of the 19th century to the present day. 
 The archive includes manuscripts, letters, various personal documents, photos, and a unique recording collection.
 
+<p float="left">
+  <img src="https://github.com/YarinBeni/DHC--Gnazim-Project/blob/main/data_images_examples/POC_sample2_withnoise%20(1).png?raw=true" width="350" height="250" alt="Noisy OCR Sample Image" />
+  <img src="https://github.com/YarinBeni/DHC--Gnazim-Project/blob/main/data_images_examples/POC_sample3_handwriten.png?raw=true" width="350" height="250" alt="Handwritten OCR Sample Image" />
+</p>
+
+*Figures: The images above are samples from the Ganazim Institute's archival collections, illustrating the types of data our OCR project is tackling. The first image is an example of a document with significant noise, demonstrating the complexities involved in extracting textual information accurately. The second image showcases a handwritten document, highlighting the challenges of interpreting varied handwriting styles. These images represent the diversity and condition of materials in the world's largest archive of Hebrew literature, containing a wealth of manuscripts, letters, and personal documents from the late 19th century to today.*
+
+
 ## Project Goals
 The goal of the project is to extract metadata and Hebrew text from the 180,000 scanned images in the Ganazim Institute archive and make it accessible for research and work.
 
