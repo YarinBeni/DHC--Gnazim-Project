@@ -10,13 +10,12 @@ from pydrive2.drive import GoogleDrive
 import time
 import functools
 from datetime import datetime
+from typing import Callable, Any
 
 # This dict will store the function name as the key and a list [total_time, call_count, run_timestamp] as the value.
 profile_data = {}
 
-from typing import Callable, Any
 
-profile_data = {}
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -64,14 +63,16 @@ profile_data = {}
 # ************************************************************************************************************************
 
 DATA_COL_NAMES = ['identifier', 'path', 'gcp_file_id', 'folder_name', 'author_subject', 'type',
+                  "Years",
                   'gcp_folder_id', 'file_name', 'ocr_writen_on', 'ocr_writen_by',
                   'ocr_main_content', 'ocr_additional_content', 'ocr_writen_on_coords',
                   'paragraphs_detection_successes', 'ocr_all_text_preprocess', 'ocr_all_text_no_preprocess',
-                  'ocr_main_content_all_text_preprocess', 'ocr_main_content_all_text_no_preprocess']
+                  'ocr_main_content_all_text_preprocess', 'ocr_main_content_all_text_no_preprocess',"years"]
 PROBLEM_COL_NAMES = ['identifier', 'path', 'gcp_file_id', 'folder_name', 'author_subject', 'type',
+                     "Years",
                      'gcp_folder_id', 'file_name', 'ocr_writen_on', 'ocr_writen_by',
                      'ocr_main_content', 'ocr_additional_content', 'ocr_writen_on_coords',
-                     'paragraphs_detection_successes', 'ocr_all_text_preprocess', 'ocr_all_text_no_preprocess',
+                     'paragraphs_detection_successes', 'ocr_all_text_preprocess', 'ocr_all_text_no_preprocess',"years",
                      'ocr_main_content_all_text_preprocess', 'ocr_main_content_all_text_no_preprocess',
                      "error_message"]
 
@@ -127,7 +128,7 @@ def profile(func: Callable) -> Callable:
     return wrapper_profile
 
 
-@profile
+# @profile
 def get_data(problem_files: bool = False) -> pd.DataFrame:
     """Retrieve data from local storage.
 
@@ -147,13 +148,14 @@ def get_data(problem_files: bool = False) -> pd.DataFrame:
         col_names = PROBLEM_COL_NAMES  # Assuming problem_col_names is defined elsewhere in your code
     # Removed the duplicated condition
     if os.path.exists(csv_file_path):
+        # df = pd.read_csv(csv_file_path,encoding='windows-1255') # in case pd.read without embedding doesnt work
         df = pd.read_csv(csv_file_path)
         df.fillna('', inplace=True)
     else:
         df = pd.DataFrame(columns=col_names)
     return df
 
-@profile
+# @profile
 def establish_connection() -> GoogleDrive:
     """Establishes connection to Google Drive.
 
@@ -164,7 +166,7 @@ def establish_connection() -> GoogleDrive:
     gauth.LocalWebserverAuth()
     return GoogleDrive(gauth)
 
-@profile
+# @profile
 def find_four_digit_substring(string: str) -> str:
     """Finds a four-digit substring representing a year in a given string.
 
@@ -196,7 +198,7 @@ def find_four_digit_substring(string: str) -> str:
                 return year_group
     return ""
 
-@profile
+# @profile
 def find_cd_label(string: str) -> str:
     """
     Finds a CD label in a given string.
@@ -213,7 +215,7 @@ def find_cd_label(string: str) -> str:
         return match.group()
     return ""
 
-@profile
+# @profile
 def is_path_processed(processed_files_paths: set, path_to_check: str) -> bool:
     """
     Check if a given path is already present in the existing data DataFrame.
@@ -228,7 +230,7 @@ def is_path_processed(processed_files_paths: set, path_to_check: str) -> bool:
     # Check if path_to_check is in the set of paths
     return path_to_check in processed_files_paths
 
-@profile
+# @profile
 def is_image(file_name: str) -> bool:
     """
     Check if the file name provided ends with a '.tif' extension indicating it is an image.
@@ -241,7 +243,7 @@ def is_image(file_name: str) -> bool:
     """
     return file_name.endswith('.tif')
 
-@profile
+# @profile
 def gcp_extract_text_from_image(data: dict[str, any], drive: GoogleDrive) -> dict[str, any]:
     """
     Extracts text from an image using GCP's OCR capabilities.
@@ -263,7 +265,7 @@ def gcp_extract_text_from_image(data: dict[str, any], drive: GoogleDrive) -> dic
     ocr_meta_data = processor.run()
     return ocr_meta_data
 
-@profile
+# @profile
 def gcp_extract_years_author_type(preprocessed_dirpath: str) -> tuple[str, str, str]:
     """
     Extracts years, author, and type from a preprocessed directory path.
@@ -291,7 +293,7 @@ def gcp_extract_years_author_type(preprocessed_dirpath: str) -> tuple[str, str, 
                 author_subject = preprocessed_str.strip()
     return years, author_subject, type_subject
 
-@profile
+# @profile
 def is_not_file(string: str) -> bool: # todo: check how fast this is
     """
     Check if the given string does not end with any of the file extensions listed in FILE_EXTENSIONS.
@@ -304,7 +306,7 @@ def is_not_file(string: str) -> bool: # todo: check how fast this is
     """
     return not any(string.endswith(ext) for ext in FILE_EXTENSIONS)
 
-@profile
+# @profile
 def get_count(df: pd.DataFrame) -> int:
     """
     Get the count of rows in a DataFrame.
@@ -320,7 +322,7 @@ def get_count(df: pd.DataFrame) -> int:
     else:
         return df.shape[0]
 
-@profile
+# @profile
 def gcp_process_files_in_folder(folder_id: str, drive: GoogleDrive, scanned_files_amount_now: int, processed_files_paths: list[str], folder_title: str = "") -> list[tuple[str, str]]:
     """
     Process all files in a given folder on Google Drive, updating processed files and handling reconnections.
@@ -335,6 +337,7 @@ def gcp_process_files_in_folder(folder_id: str, drive: GoogleDrive, scanned_file
     Returns:
         List[Tuple[str, str]]: A list of tuples where each tuple contains the ID and title of a folder that needs to be processed.
     """
+
     folder_files_list = drive.ListFile({'q': "'%s' in parents and trashed=false" % folder_id}).GetList()
     problem_cnt = get_count(get_data(problem_files=True))
     sample_cnt = scanned_files_amount_now
@@ -350,13 +353,12 @@ def gcp_process_files_in_folder(folder_id: str, drive: GoogleDrive, scanned_file
         try:
             current_folder_title = folder_title + "\\" + file['title']
             new_row = []
-
             if is_image(file['title']):
                 if not is_path_processed(processed_files_paths, current_folder_title):
-                    print(f"Process file:{file['title']} First attempt Successfully")
                     new_row = gcp_process_file(current_folder_title, drive, file, sample_cnt, folder_title)
                     sample_cnt += 1
                     new_processed_files = pd.concat([new_processed_files, new_row], axis=0)
+                    print(f"Process file:{file['title']} First attempt Successfully")
             elif is_not_file(file['title']):
                 folders_to_process.append((file['id'], current_folder_title))
 
@@ -377,6 +379,7 @@ def gcp_process_files_in_folder(folder_id: str, drive: GoogleDrive, scanned_file
     end_time = time.time()
 
     if sample_cnt > scanned_files_amount_now:
+        # new_processed_files.to_csv('results/gnazim_db_meta_data.csv', mode='a', header=False, index=False,encoding='windows-1255')
         new_processed_files.to_csv('results/gnazim_db_meta_data.csv', mode='a', header=False, index=False)
 
         print(f"Folder {folder_title} Processed Successfully and Save to Disk after {end_time - start_time} time\n")
@@ -386,7 +389,7 @@ def gcp_process_files_in_folder(folder_id: str, drive: GoogleDrive, scanned_file
             f"and No Files Saved to Disk after {end_time - start_time} seconds\n")
     return folders_to_process
 
-@profile
+# @profile
 def gcp_reconnect(drive: GoogleDrive) -> None:
     """
     Attempt to reconnect to Google Drive service.
@@ -401,7 +404,7 @@ def gcp_reconnect(drive: GoogleDrive) -> None:
     print(f"Connection attempt failed. Retrying in {60} seconds...")
     time.sleep(60)
 
-@profile
+# @profile
 def create_new_problem_row(current_folder_title: str, e: Exception, file: dict[str, any], new_row: dict[str, any], problem_cnt: int) -> dict[str, any]:
     """
     Create a new row for logging problematic files when exceptions occur during processing.
@@ -431,7 +434,7 @@ def create_new_problem_row(current_folder_title: str, e: Exception, file: dict[s
                         "error_message": str(e)})
     return new_row
 
-@profile
+# @profile
 def gcp_process_file(file_path: str, drive: any, file1: dict[str, any], count: int, folder_title: str) -> pd.DataFrame:
     """
     Process a single file from Google Cloud Platform, extracting meta and OCR data.
@@ -455,11 +458,11 @@ def gcp_process_file(file_path: str, drive: any, file1: dict[str, any], count: i
     new_row["folder_name"] = folder_title
     new_row["gcp_folder_id"] = file1['parents'][0]['id']
     new_row["file_name"] = file1['title']
-    new_row["Years"] = ""  # this is redundant column we need to remove so in the end of the run will do
     processed_path = new_row["path"].split("\\")
     processed_path.pop(0)
     new_row["years"], new_row["author_subject"], new_row["type"] = gcp_extract_years_author_type(processed_path)
     count += 1
+    new_row["Years"] = ""  # this is redundant column we need to remove so in the end of the run will do
     new_row["identifier"] = f"IDGNAZIM000{count}"
 
     # Process OCR Data From Image
@@ -478,7 +481,7 @@ def gcp_process_file(file_path: str, drive: any, file1: dict[str, any], count: i
 
     return new_row
 
-@profile
+# @profile
 def run() -> None:
     """
     Run the main processing function to iterate over folders and process files from Google Cloud Platform.
@@ -491,9 +494,9 @@ def run() -> None:
     # GCP Connection
     current_drive = establish_connection()
     # Initialize Folders root
-    root_folder_id = "1sciJWxtjAxbas-fyxuIiXPANOXGxectN"  # First Folder to Preprocess Than DFS OR BFS On Tree
-    folders_to_process = [(root_folder_id, "")]
+    folders_to_process = get_folders_queue()
     reconnect_trashold = 600
+    scanned_files_trashold = 90
     problem_folders_to_process = []  # Store problematic folders' data here
     data = get_data()
     scanned_files_amount_in_beginning = get_count(data)
@@ -502,8 +505,7 @@ def run() -> None:
     # Create a set of all values of "path" to later check no file that have been reprocessed
     # to avoid duplicates.
     processed_files_paths = set(data["path"].values)
-    # todo need to write code that in process folder after its writen to csv new files its add the
-    #  paths to this dict processed_files_paths
+
     while folders_to_process:
 
         current_folder_id, current_folder_title = folders_to_process.pop(0)
@@ -514,7 +516,11 @@ def run() -> None:
             f"\nscanned_files_amount_in_beginning:{scanned_files_amount_in_beginning} , scanned_files_amount_now: {scanned_files_amount_now}")
 
         scanned_files_amount = scanned_files_amount_now - scanned_files_amount_in_beginning
-        if scanned_files_amount > 3000:  # Max amount before code disconnect with WinError
+        if scanned_files_amount >= scanned_files_trashold:
+            # Save the Queue To Tackle the longer BFS Problem to able to start where we stoped
+            folders_to_process_queue = pd.DataFrame(folders_to_process, columns=['folder_id', 'files'])
+            folders_to_process_queue.to_csv('results/gnazim_folders_to_process_queue.csv',
+                                            mode='w', header=True,index=False)
             break
 
         if scanned_files_amount >= reconnect_trashold:  # Reconnect Every 600 read samples
@@ -529,6 +535,7 @@ def run() -> None:
                                                new_folders_to_process if
                                                folder_title not in gcp_processed_folders_names]
             folders_to_process.extend(new_filtered_folders_to_process)
+
         except Exception as er:
             if str(er) == "invalid_grant: Bad Request":
                 print(f"Error processing folder {current_folder_id} - {current_folder_title}: {er}")
@@ -541,13 +548,29 @@ def run() -> None:
                 # problem_folders_to_process.append(
                 #     {"folder_id": current_folder_id, "folder_title": current_folder_title})
                 # write_problem_folder_to_excel(problem_folders_to_process)
-
+    #
     run_end_time = time.time()
     print(f"End Of Run:\nProblem folders:\n{problem_folders_to_process}\n"
           f"Run function finished processing {scanned_files_amount} files "
           f"in {(run_end_time - run_start_time) / 60} minutes!")
 
-@profile
+
+def get_folders_queue():
+    root_folder_id = "1sciJWxtjAxbas-fyxuIiXPANOXGxectN"  # First Folder to Preprocess Than DFS OR BFS On Tree
+    csv_folders_queue_path = 'results/gnazim_folders_to_process_queue.csv'
+    folders_queue_col_names = ["folder_id", "files"]
+    df = pd.DataFrame(columns=folders_queue_col_names)
+    if os.path.exists(csv_folders_queue_path):
+        df = pd.read_csv(csv_folders_queue_path)
+        df.fillna('', inplace=True)
+    if not df.empty:
+        folders_to_process = [(row['folder_id'], row['files']) for index, row in df.iterrows()]
+    else:
+        folders_to_process = [(root_folder_id, "")]
+    return folders_to_process
+
+
+# @profile
 def write_problem_folder_to_excel(new_problem_row: dict[str, any]) -> None:
     """
     Write problem folder information to an Excel file.
@@ -571,7 +594,7 @@ def write_problem_folder_to_excel(new_problem_row: dict[str, any]) -> None:
         with pd.ExcelWriter('results/gnazim_db_problem_files.xlsx') as writer:
             new_problem_folders.to_excel(writer, index=False, sheet_name='Sheet1')
 
-@profile
+# @profile
 def write_problem_folder_to_csv(new_problem_row: dict[str, any]) -> None:
     """
     Write problem folder information to a CSV file.
@@ -591,6 +614,7 @@ def write_problem_folder_to_csv(new_problem_row: dict[str, any]) -> None:
         write_header = not os.path.exists(csv_file_path)
 
         # Append the new data to the CSV file (or create a new file if it doesn't exist)
+        # new_problem_data.to_csv(csv_file_path, mode='a', index=False, header=write_header,encoding='windows-1255')
         new_problem_data.to_csv(csv_file_path, mode='a', index=False, header=write_header)
 
 
@@ -610,12 +634,12 @@ if __name__ == "__main__":
     for func_data in profile_data.values():
         func_data[2] = run_end_time  # Update the run_timestamp for each function
 
-    # Convert the profile data to a DataFrame
-    profile_df = pd.DataFrame.from_dict(profile_data, orient='index', columns=['Total Time', 'Calls', 'Run Timestamp'])
-    profile_df.sort_values('Total Time', ascending=False, inplace=True)
-
-    # Save to a CSV for later analysis
-    profile_df.to_csv('results/gnazim_function_profile_data.csv')
-
-    # Display the DataFrame
-    print(profile_df)
+    # # Convert the profile data to a DataFrame
+    # profile_df = pd.DataFrame.from_dict(profile_data, orient='index', columns=['Total Time', 'Calls', 'Run Timestamp'])
+    # profile_df.sort_values('Total Time', ascending=False, inplace=True)
+    #
+    # # Save to a CSV for later analysis
+    # profile_df.to_csv('results/gnazim_function_profile_data.csv')
+    #
+    # # Display the DataFrame
+    # print(profile_df)
