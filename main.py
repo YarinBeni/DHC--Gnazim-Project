@@ -496,7 +496,7 @@ def run() -> None:
     # Initialize Folders root
     folders_to_process = get_folders_queue()
     reconnect_trashold = 600
-    scanned_files_trashold = 90
+    scanned_files_trashold = 2000
     problem_folders_to_process = []  # Store problematic folders' data here
     data = get_data()
     scanned_files_amount_in_beginning = get_count(data)
