@@ -65,16 +65,16 @@ profile_data = {}
 DATA_COL_NAMES = ['identifier', 'path', 'gcp_file_id', 'folder_name', 'author_subject', 'type',
                   "Years",
                   'gcp_folder_id', 'file_name', 'ocr_writen_on', 'ocr_writen_by',
-                  'ocr_main_content', 'ocr_additional_content', 'ocr_writen_on_coords',
+                  'ocr_main_content', 'ocr_additional_content',
+
+                  'ocr_writen_on_coords', 'ocr_writen_by_coords', 'ocr_main_content_coords',
+                  'ocr_additional_content_coords',
+
                   'paragraphs_detection_successes', 'ocr_all_text_preprocess', 'ocr_all_text_no_preprocess',
                   'ocr_main_content_all_text_preprocess', 'ocr_main_content_all_text_no_preprocess',"years"]
-PROBLEM_COL_NAMES = ['identifier', 'path', 'gcp_file_id', 'folder_name', 'author_subject', 'type',
-                     "Years",
-                     'gcp_folder_id', 'file_name', 'ocr_writen_on', 'ocr_writen_by',
-                     'ocr_main_content', 'ocr_additional_content', 'ocr_writen_on_coords',
-                     'paragraphs_detection_successes', 'ocr_all_text_preprocess', 'ocr_all_text_no_preprocess',"years",
-                     'ocr_main_content_all_text_preprocess', 'ocr_main_content_all_text_no_preprocess',
-                     "error_message"]
+
+PROBLEM_COL_NAMES = DATA_COL_NAMES + [ "error_message"]
+
 
 FILE_EXTENSIONS = [
     '.txt', '.doc', '.docx', '.pdf', '.rtf',
@@ -380,7 +380,7 @@ def gcp_process_files_in_folder(folder_id: str, drive: GoogleDrive, scanned_file
 
     if sample_cnt > scanned_files_amount_now:
         # new_processed_files.to_csv('results/gnazim_db_meta_data.csv', mode='a', header=False, index=False,encoding='windows-1255')
-        new_processed_files.to_csv('results/gnazim_db_meta_data.csv', mode='a', header=False, index=False)
+        new_processed_files.to_csv('results/gnazim_db_meta_data.csv', mode='a', header=False, index=False,encoding='windows-1255')
 
         print(f"Folder {folder_title} Processed Successfully and Save to Disk after {end_time - start_time} time\n")
     else:
@@ -520,7 +520,7 @@ def run() -> None:
             # Save the Queue To Tackle the longer BFS Problem to able to start where we stoped
             folders_to_process_queue = pd.DataFrame(folders_to_process, columns=['folder_id', 'files'])
             folders_to_process_queue.to_csv('results/gnazim_folders_to_process_queue.csv',
-                                            mode='w', header=True,index=False)
+                                            mode='w', header=True,index=False,encoding='windows-1255')
             break
 
         if scanned_files_amount >= reconnect_trashold:  # Reconnect Every 600 read samples
@@ -615,7 +615,49 @@ def write_problem_folder_to_csv(new_problem_row: dict[str, any]) -> None:
 
         # Append the new data to the CSV file (or create a new file if it doesn't exist)
         # new_problem_data.to_csv(csv_file_path, mode='a', index=False, header=write_header,encoding='windows-1255')
-        new_problem_data.to_csv(csv_file_path, mode='a', index=False, header=write_header)
+        new_problem_data.to_csv(csv_file_path, mode='a', index=False, header=write_header,encoding='windows-1255')
+
+def create_df_gcp_file_links():
+    """
+      Reads a CSV file containing metadata from a specific file path and adds two new columns with generated Google Cloud
+      Platform (GCP) file and folder links. The new data is saved to a new CSV file.
+
+      The function internally defines two helper functions:
+      - `create_gcp_file_link`: Generates a link to the file in Google Drive based on the 'gcp_file_id' in each row.
+      - `create_gcp_folder_link`: Generates a link to the folder in Google Drive based on the 'gcp_folder_id' in each row.
+
+      These links are then applied to each row of the DataFrame, creating two new columns 'gcp_image_link' and
+      'gcp_folder_link'. Finally, the updated DataFrame is saved as a new CSV file with the added link columns.
+
+      Raises:
+          FileNotFoundError: If the input CSV file does not exist at the specified `file_path`.
+          Exception: For issues related to reading the CSV, applying functions, or writing the output file.
+
+      CSV File structure:
+          The input CSV is expected to have at least 'gcp_file_id' and 'gcp_folder_id' columns.
+
+      Side effects:
+          - Reads a CSV file from a hardcoded file path.
+          - Creates and saves a new CSV file with additional columns to a hardcoded file path.
+          - The function does not return any value or the modified DataFrame.
+      """
+    data=get_data()
+
+    def create_gcp_file_link(row):
+        link = f"https://drive.google.com/file/d/{row['gcp_file_id']}"
+        return link
+
+    def create_gcp_folder_link(row):
+        link = f"https://drive.google.com/drive/folders/{row['gcp_folder_id']}"
+        return link
+
+    # Apply the function to each row and create a new column 'gcp_image_link' with the resulting links
+    data['gcp_image_link'] = data.apply(create_gcp_file_link, axis=1)
+    data['gcp_folder_link'] = data.apply(create_gcp_folder_link, axis=1)
+    file_path = r'C:\Users\yarin\PycharmProjects\DHC\GnazimProject\results\gnazim_db_meta_data_with_links.csv'
+    # Save the DataFrame to a CSV file
+    data.to_csv(file_path, index=False, encoding='windows-1255')  # Set index=False if you don't want to save the indexa=3
+
 
 
 # ************************************************************************************************************************
@@ -630,6 +672,7 @@ if __name__ == "__main__":
     # Run end timestamp
     run_end_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    create_df_gcp_file_links()
     # Add the run timestamp to the profile data
     for func_data in profile_data.values():
         func_data[2] = run_end_time  # Update the run_timestamp for each function
