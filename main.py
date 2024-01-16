@@ -19,44 +19,61 @@ profile_data = {}
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Code Logic:
-# Connect to GCP
-# Initialize a stack with the root folder to process
-# Initialize a threshold for reconnection to GCP
+# Pseudo Code Logic:
+# Initialize GCP Connection
+# Initialize Queue with Root Folder ID
+# Set Reconnection Threshold for GCP
+# Set File Processing Count Threshold
+# Set Queue Save and Read Threshold
 
-# Loop until the folder stack is empty:
-#     Dequeue a folder from the stack
-#     Retrieve locally saved data of previously processed files
-#     Determine the count of files already processed
-#     Create a dictionary to track processed files using data from local storage
-#     Retrieve locally saved data of problematic folders
-#     Initialize a counter for the number of files processed in the current run to 0
+# While Queue is not empty:
+#    Dequeue a Folder from Queue
+#    Retrieve Data of Previously Processed and Problematic Files from Local Storage
+#    Count Already Processed Files and Create Set of Processed File Paths
+#    Initialize Counter for Files Processed in Current Run
 
-#     Check if the reconnection threshold is reached:
-#         If yes, reconnect to GCP
+#    If Reconnection Threshold is Reached:
+#        Reconnect to GCP
 
-#     # Process Files in the Current Folder
-#     Obtain a list of files from the current folder
-#     Initialize a temporary data table to store newly processed files' data
+#    If File Processing Count Threshold is Reached:
+#        Save Current State of Queue to Local Storage
 
-#     Loop through all files in the current folder:
-#         If the file is an image and hasn't been processed yet:
-#             Attempt to process the file and append new row data to the running data table
-#             If a GCP connection error occurs:
-#                 Attempt to refresh the GCP token and reprocess the file
-#                 If the second attempt fails:
-#                     Exit the loop and raise an error indicating the folder processing failure,
-#                     along with relevant error and folder information
-#                 Else if the second attempt succeeds:
-#                     Append new row data to the running data table and continue to the next file
-#             If a non-GCP connection error occurs:
-#                 Log the folder name and error details
-#                 Update the problematic folders data on local disk and exit the loop
-#         Else if the file is not an image (likely another folder):
-#             Add the file (folder) to the stack for processing
+#    Get List of Files in Current Folder
+#    Initialize DataFrame for New Processed Files
 
-#     If the entire folder was successfully processed:
-#         Append the running data table to the locally saved data of processed files
+#    For Each File in Folder:
+#        If File is an Image and Not Already Processed:
+#            Extract Meta Data from File Path (gcp_extract_years_author_type)
+#            Download File from GCP
+#            Process Image to Detect Relevant Paragraphs (ImageProcessor)
+#            Extract Text from Detected Paragraphs using GCP OCR (gcp_extract_text_from_image)
+#            Append Processed File Data to New DataFrame
+
+#            If GCP Connection Error Occurs:
+#                Attempt Reconnection (gcp_reconnect) and Reprocess File
+#                If Reconnection Fails:
+#                    Log Error and Update Problematic Files Data in Local Storage
+#                   Break from Loop
+
+#        Else If File is Not an Image:
+#            Add File (Folder) to Queue for Later Processing
+
+#     If Folder is Successfully Processed:
+#         Append New Data to DataFrame of Processed Files
+#         Update Local CSV Files with New Processed and Problematic Files Data
+
+#     If Queue Save and Read Threshold is Reached:
+#         Read Next Set of Folders from Saved Queue State
+
+#     Perform Function Profiling for Each Function Call
+
+# After Queue is Empty:
+#     Generate GCP File and Folder Links using create_df_gcp_file_links
+#     Append Links to Processed Files DataFrame
+#     Save Updated DataFrame to Local Storage
+
+# Update Profiling Data with Run Timestamp at End of Run
+# Perform Overall Time Analysis*
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
