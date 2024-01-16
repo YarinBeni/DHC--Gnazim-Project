@@ -23,44 +23,54 @@ To improve the accuracy of our OCR model, we have employed various image process
 In addition to extracting the text from the scanned images, we have also used a pandas dataframe as a data structure for extracting metadata from the Google Cloud folder structures and names. This has allowed us to efficiently organize and analyze the data from the archive, and create a CSV file containing all of the extracted data.
 Overall, the combination of OCR, image processing, and data analysis methods has allowed us to efficiently extract and analyze Hebrew text from the scanned images in the Ganazim Institute archive, providing valuable insights into the history and culture of the Jewish people.
 
-## Code Logic of main.py
-
-The script follows the outlined logic to process folders and files in Google Cloud Platform (GCP):
+## Pseudo Code Logic of main.py
 
 1. **GCP Connection**:
-   - Establish a connection to GCP.
-   
-2. **Initialization**:
-   - Create a stack initialized with the root folder to be processed.
-   - Set a threshold for reconnection to GCP.
+   - Initialize GCP Connection.
+
+2. **Queue Initialization**:
+   - Initialize Queue with Root Folder ID.
+   - Set Reconnection Threshold for GCP.
+   - Set File Processing Count Threshold.
+   - Set Queue Save and Read Threshold.
 
 3. **Main Processing Loop**:
-   - Continue processing until the folder stack is empty.
-   - Dequeue a folder from the stack.
-   - Retrieve locally saved data of previously processed files.
-   - Determine the count of files already processed.
-   - Create a dictionary to track processed files using data from local storage.
-   - Retrieve locally saved data of problematic folders.
-   - Initialize a counter for the number of files processed in the current run to 0.
+   - While Queue is not empty:
+     - Dequeue a Folder from Queue.
+     - Retrieve Data of Previously Processed and Problematic Files from Local Storage.
+     - Count Already Processed Files and Create Set of Processed File Paths.
+     - Initialize Counter for Files Processed in Current Run.
 
-   - **Reconnection Check**:
-     - Check if the reconnection threshold is reached, and if yes, reconnect to GCP.
+     - If Reconnection Threshold is Reached, Reconnect to GCP.
 
-   - **File Processing**:
-     - Obtain a list of files from the current folder.
-     - Initialize a temporary data table to store newly processed files' data.
-     - Loop through all files in the current folder:
-       - For image files that haven't been processed yet:
-         - Attempt to process the file and append new row data to the running data table.
-         - Handle GCP connection errors by refreshing the GCP token and reattempting file processing.
-           - If the second attempt fails, exit the loop and raise an error indicating the folder processing failure, along with relevant error and folder information.
-           - If the second attempt succeeds, append new row data to the running data table and continue to the next file.
-         - For non-GCP connection errors, log the folder name and error details, update the problematic folders data on local disk, and exit the loop.
-       - For non-image files (likely other folders), add the file (folder) to the stack for processing.
+     - **File Processing**:
+       - Get List of Files in Current Folder.
+       - Initialize DataFrame for New Processed Files.
+       - For Each File in Folder:
+         - If File is an Image and Not Already Processed:
+           - Extract Meta Data from File Path (gcp_extract_years_author_type).
+           - Download File from GCP.
+           - Process Image to Detect Relevant Paragraphs (ImageProcessor).
+           - Extract Text from Detected Paragraphs using GCP OCR (gcp_extract_text_from_image).
+           - Append Processed File Data to New DataFrame.
+           - If GCP Connection Error Occurs:
+             - Attempt Reconnection (gcp_reconnect) and Reprocess File.
+             - If Reconnection Fails, Log Error and Update Problematic Files Data in Local Storage, Break from Loop.
+         - Else If File is Not an Image, Add File (Folder) to Queue for Later Processing.
 
-   - **Post-Processing**:
-     - If the entire folder was successfully processed, append the running data table to the locally saved data of processed files.
+     - **Post-Processing**:
+       - If Folder is Successfully Processed, Append New Data to DataFrame of Processed Files.
+       - Update Local CSV Files with New Processed and Problematic Files Data.
+       - If Queue Save and Read Threshold is Reached, Read Next Set of Folders from Saved Queue State.
+       - Perform Function Profiling for Each Function Call.
 
+4. **Finalization**:
+   - After Queue is Empty:
+     - Generate GCP File and Folder Links using create_df_gcp_file_links.
+     - Append Links to Processed Files DataFrame.
+     - Save Updated DataFrame to Local Storage.
+   - Update Profiling Data with Run Timestamp at End of Run.
+   - Perform Overall Time Analysis*.
 
 ## Future Goals
 In the future, we plan to classify handwritten and typed text and build a dataset suitable for research purposes. 
