@@ -26,13 +26,16 @@
 # Based on
 # https://stackoverflow.com/questions/57249273/how-to-detect-paragraphs-in-a-text-document-image-for-a-non-consistent-text-stru
 
+# Based on
+# https://stackoverflow.com/questions/57249273/how-to-detect-paragraphs-in-a-text-document-image-for-a-non-consistent-text-stru
+
 
 import cv2
 import re
 import pytesseract
 
 
-class ImageProcessor:
+class ParagraphDetector:
     """
     A class for processing images, particularly for OCR (Optical Character Recognition)
     and detection of text regions.
