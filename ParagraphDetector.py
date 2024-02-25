@@ -1,31 +1,3 @@
-
-# Not used rlsa algorithm 
-# def rlsa(image, threshold):
-#     # Apply horizontal RLSA
-#     horizontal_rlsa = np.copy(image)
-#     for row in range(image.shape[0]):
-#         run_start = 0
-#         for col in range(image.shape[1]):
-#             if image[row, col] == 255:  # White pixel
-#                 if col - run_start <= threshold:
-#                     horizontal_rlsa[row, run_start:col] = 255
-#                 run_start = col
-#
-#     # Apply vertical RLSA
-#     vertical_rlsa = np.copy(horizontal_rlsa)
-#     for col in range(horizontal_rlsa.shape[1]):
-#         run_start = 0
-#         for row in range(horizontal_rlsa.shape[0]):
-#             if horizontal_rlsa[row, col] == 255:  # White pixel
-#                 if row - run_start <= threshold:
-#                     vertical_rlsa[run_start:row, col] = 255
-#                 run_start = row
-#
-#     return vertical_rlsa
-
-# Based on
-# https://stackoverflow.com/questions/57249273/how-to-detect-paragraphs-in-a-text-document-image-for-a-non-consistent-text-stru
-
 # Based on
 # https://stackoverflow.com/questions/57249273/how-to-detect-paragraphs-in-a-text-document-image-for-a-non-consistent-text-stru
 
@@ -292,12 +264,12 @@ class ParagraphDetector:
         # Initializing the dictionary with default values
         paragraphs_detection_process_completed = 1
         extracted_ocr_data = {
-            "ocr_writen_on": "",
-            "ocr_writen_by": "",
+            "ocr_written_on": "",
+            "ocr_written_by": "",
             "ocr_main_content": "",
             "ocr_additional_content": "",
-            "ocr_writen_on_coords": "",
-            "ocr_writen_by_coords": "",  # Add coordinates for 'written_by'
+            "ocr_written_on_coords": "",
+            "ocr_written_by_coords": "",  # Add coordinates for 'written_by'
             "ocr_main_content_coords": "",  # Add coordinates for 'main_content'
             "ocr_additional_content_coords": "",  # Add coordinates for 'additional_content'
             "paragraphs_detection_successes": paragraphs_detection_process_completed}
@@ -320,13 +292,13 @@ class ParagraphDetector:
             if written_on_candidates:
                 written_on_image, written_on_coords, written_on_text = written_on_candidates[0]
                 written_on_text = [line for line in written_on_text.split("\n") if line.strip()]
-                extracted_ocr_data["ocr_writen_on"] = written_on_text[0]
-                extracted_ocr_data["ocr_writen_on_coords"] = re.sub(r'[()]', '', str(written_on_coords))
+                extracted_ocr_data["ocr_written_on"] = written_on_text[0]
+                extracted_ocr_data["ocr_written_on_coords"] = re.sub(r'[()]', '', str(written_on_coords))
                 self.resize_and_plot(written_on_image, show_image=False)
                 if len(written_on_text) > 1:
-                    extracted_ocr_data["ocr_writen_by"] = written_on_text[1]
+                    extracted_ocr_data["ocr_written_by"] = written_on_text[1]
                     # Save the coordinates for 'written_by' as well.
-                    extracted_ocr_data["ocr_writen_by_coords"] = re.sub(r'[()]', '', str(written_on_coords))
+                    extracted_ocr_data["ocr_written_by_coords"] = re.sub(r'[()]', '', str(written_on_coords))
             else:
                 paragraphs_detection_process_completed = 0
             # Create main_content_candidates list
@@ -341,8 +313,8 @@ class ParagraphDetector:
                 if len(main_content_candidates) > 1:
                     additional_content_image, additional_content_coords, additional_content_text = \
                         main_content_candidates[1]
-                    if additional_content_text != extracted_ocr_data["ocr_writen_on"] + extracted_ocr_data[
-                        "ocr_writen_by"]:
+                    if additional_content_text != extracted_ocr_data["ocr_written_on"] + extracted_ocr_data[
+                        "ocr_written_by"]:
                         extracted_ocr_data["ocr_additional_content"] = additional_content_text
                         # Save the coordinates for 'additional_content'.
                         extracted_ocr_data["ocr_additional_content_coords"] = re.sub(r'[()]', '',
@@ -357,30 +329,37 @@ class ParagraphDetector:
         return extracted_ocr_data
 
     def is_handwritten(self):
-        """Determines if the text is handwritten based on the proportion of Hebrew characters.
+        """
+        Determines if the text is handwritten based on the proportion of Hebrew characters.
 
-        This function analyzes the text stored in `self.ocr_of_all_text_no_prero` and calculates the
-        proportion of Hebrew characters in it. The text is considered to be handwritten if the proportion
-        of Hebrew characters is less than a specified threshold (currently set at 0.55).
+        This function first selects the appropriate text to analyze: it uses `self.ocr_of_all_text_prepro`
+        if it's not empty; otherwise, it falls back to `self.ocr_of_all_text_no_prero`. It then calculates
+        the proportion of Hebrew characters in the selected text. The text is considered to be handwritten
+        if the proportion of Hebrew characters is less than a specified threshold (currently set at 0.4).
 
-        The function removes all non-Hebrew characters from the text and then compares the length of the
-        filtered text to the length of the original text. If the length of the filtered text is less than
-        55% of the original text's length, it returns 1 (indicating handwritten). Otherwise, it returns 0.
+        The function removes all non-Hebrew characters from the selected text and then compares the length
+        of the filtered text to the length of the original text. If the length of the filtered text is less
+        than 40% of the original text's length, it returns 1 (indicating handwritten). Otherwise, it returns 0.
 
         Example:
-            If self.ocr_of_all_text_no_prero = 'סי | כב // / ָ 9 ה [ערה, ס.ל, / ',
+            If self.ocr_of_all_text_prepro is empty and self.ocr_of_all_text_no_prero = 'סי | כב // / ָ 9 ה [ערה, ס.ל, / ',
             then filtered_hebrew_text = 'סיכבָהערהסל'.
             The length of filtered_hebrew_text is 11 and the length of the original text is 32.
-            Since 11 < 32 * 0.55 (which equals 17.6), the function returns 1.
+            Since 11 < 32 * 0.4 (which equals 12.8), the function returns 1.
 
         Returns:
             int: 1 if the text is considered handwritten (based on the proportion of Hebrew characters),
                  0 otherwise.
         """
-        proportion_value = 0.55
+        proportion_value = 0.4
         # Remove all non-Hebrew characters
-        filtered_hebrew_text = re.sub(r'[^\u0590-\u05FF]', '', self.ocr_of_all_text_no_prero)
-        return 1 if len(filtered_hebrew_text) < len(self.ocr_of_all_text_no_prero) * proportion_value else 0
+        if len( self.ocr_of_all_text_prepro) == 0:
+            hebrew_text = self.ocr_of_all_text_no_prero
+        else:
+            hebrew_text = self.ocr_of_all_text_prepro
+
+        filtered_hebrew_text = re.sub(r'[^\u0590-\u05FF]', '', hebrew_text)
+        return 1 if len(filtered_hebrew_text) < len(hebrew_text) * proportion_value else 0
 
     def run(self, log_metadata=False):
         """
@@ -396,13 +375,14 @@ class ParagraphDetector:
          Returns:
              dict: A dictionary containing all extracted data and results from the processing pipeline.
          """
+
         roi_list = self.get_paragraph_bounding_box()
         result = self.plot_roi_and_ocr(roi_list)
         result["ocr_all_text_preprocess"] = self.ocr_of_all_text_prepro
         result['is_handwritten'] = self.is_handwritten()
         result["ocr_all_text_no_preprocess"] = self.ocr_of_all_text_no_prero
-        if result['paragraphs_detection_successes'] and len(result["ocr_writen_by"]) + len(result["ocr_writen_on"]) > 1:
-            cut_index = len(result["ocr_writen_by"]) + len(result["ocr_writen_on"]) + len(
+        if result['paragraphs_detection_successes'] and len(result["ocr_written_by"]) + len(result["ocr_written_on"]) > 1:
+            cut_index = len(result["ocr_written_by"]) + len(result["ocr_written_on"]) + len(
                 result["ocr_additional_content"])
             result["ocr_main_content_all_text_preprocess"] = self.ocr_of_all_text_prepro[cut_index:]
             result["ocr_main_content_all_text_no_preprocess"] = self.ocr_of_all_text_no_prero[cut_index:]
@@ -423,7 +403,7 @@ class ParagraphDetector:
 
 # Unittest I made for ImageProcessor class on different samples :
 # Samples:
-# path = 'POC_sample3_handwriten.tif'  # Hand Writen Example ALSO WORKS - GOOD
+# path = 'POC_sample3_handwriten.tif'  # Hand written Example ALSO WORKS - GOOD
 # path = 'POC_sample2_withnoise.tif'  # Typed with noise - GOOD
 # path = 'SAMPLE_Long_Author04.tif'# Typed with long author name - GOOD
 # path = 'POC_sample5_withnoise_Author.tif'  #  FIXED PROBLEM OVERLAP RECTANGLES - GOOD
