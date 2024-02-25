@@ -1,9 +1,9 @@
 # Gnazim Project projectid: gnazim-project
-
+import csv
 import os
 import cv2
 import pandas as pd
-from ParagraphDetector import ImageProcessor
+from ParagraphDetector import ParagraphDetector
 import re
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
@@ -11,82 +11,76 @@ import time
 import functools
 from datetime import datetime
 from typing import Callable, Any
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # This dict will store the function name as the key and a list [total_time, call_count, run_timestamp] as the value.
 profile_data = {}
 
 
 
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Pseudo Code Logic:
-# Initialize GCP Connection
-# Initialize Queue with Root Folder ID
-# Set Reconnection Threshold for GCP
-# Set File Processing Count Threshold
-# Set Queue Save and Read Threshold
+# Code Logic:
+# Connect to GCP
+# Initialize a stack with the root folder to process
+# Initialize a threshold for reconnection to GCP
 
-# While Queue is not empty:
-#    Dequeue a Folder from Queue
-#    Retrieve Data of Previously Processed and Problematic Files from Local Storage
-#    Count Already Processed Files and Create Set of Processed File Paths
-#    Initialize Counter for Files Processed in Current Run
+# Loop until the folder stack is empty:
+#     Dequeue a folder from the stack
+#     Retrieve locally saved data of previously processed files
+#     Determine the count of files already processed
+#     Create a dictionary to track processed files using data from local storage
+#     Retrieve locally saved data of problematic folders
+#     Initialize a counter for the number of files processed in the current run to 0
 
-#    If Reconnection Threshold is Reached:
-#        Reconnect to GCP
+#     Check if the reconnection threshold is reached:
+#         If yes, reconnect to GCP
 
-#    If File Processing Count Threshold is Reached:
-#        Save Current State of Queue to Local Storage
+#     # Process Files in the Current Folder
+#     Obtain a list of files from the current folder
+#     Initialize a temporary data table to store newly processed files' data
 
-#    Get List of Files in Current Folder
-#    Initialize DataFrame for New Processed Files
+#     Loop through all files in the current folder:
+#         If the file is an image and hasn't been processed yet:
+#             Attempt to process the file and append new row data to the running data table
+#             If a GCP connection error occurs:
+#                 Attempt to refresh the GCP token and reprocess the file
+#                 If the second attempt fails:
+#                     Exit the loop and raise an error indicating the folder processing failure,
+#                     along with relevant error and folder information
+#                 Else if the second attempt succeeds:
+#                     Append new row data to the running data table and continue to the next file
+#             If a non-GCP connection error occurs:
+#                 Log the folder name and error details
+#                 Update the problematic folders data on local disk and exit the loop
+#         Else if the file is not an image (likely another folder):
+#             Add the file (folder) to the stack for processing
 
-#    For Each File in Folder:
-#        If File is an Image and Not Already Processed:
-#            Extract Meta Data from File Path (gcp_extract_years_author_type)
-#            Download File from GCP
-#            Process Image to Detect Relevant Paragraphs (ImageProcessor)
-#            Extract Text from Detected Paragraphs using GCP OCR (gcp_extract_text_from_image)
-#            Append Processed File Data to New DataFrame
-
-#            If GCP Connection Error Occurs:
-#                Attempt Reconnection (gcp_reconnect) and Reprocess File
-#                If Reconnection Fails:
-#                    Log Error and Update Problematic Files Data in Local Storage
-#                   Break from Loop
-
-#        Else If File is Not an Image:
-#            Add File (Folder) to Queue for Later Processing
-
-#     If Folder is Successfully Processed:
-#         Append New Data to DataFrame of Processed Files
-#         Update Local CSV Files with New Processed and Problematic Files Data
-
-#     If Queue Save and Read Threshold is Reached:
-#         Read Next Set of Folders from Saved Queue State
-
-#     Perform Function Profiling for Each Function Call
-
-# After Queue is Empty:
-#     Generate GCP File and Folder Links using create_df_gcp_file_links
-#     Append Links to Processed Files DataFrame
-#     Save Updated DataFrame to Local Storage
-
-# Update Profiling Data with Run Timestamp at End of Run
-# Perform Overall Time Analysis*
+#     If the entire folder was successfully processed:
+#         Append the running data table to the locally saved data of processed files
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+# ************************************************************************************************************************
 
-DATA_COL_NAMES = ['identifier', 'path', 'gcp_file_id', 'folder_name', 'author_subject', 'type',
-                  "Years",
-                  'gcp_folder_id', 'file_name', 'ocr_writen_on', 'ocr_writen_by',
+DATA_COL_NAMES = ['identifier','gcp_folder_id', 'gcp_file_id',
+                  'path', 'folder_name', 'file_name',
+                  'author_folder_name', 'card_catalog_type',"years",
+
+                  'paragraphs_detection_successes', "is_handwritten",
+
+                  'ocr_all_text_preprocess', 'ocr_all_text_no_preprocess',
+                  'ocr_main_content_all_text_preprocess', 'ocr_main_content_all_text_no_preprocess',
+                                                          
+                  'ocr_written_on', 'ocr_written_by',
                   'ocr_main_content', 'ocr_additional_content',
 
-                  'ocr_writen_on_coords', 'ocr_writen_by_coords', 'ocr_main_content_coords',
+                  'ocr_written_on_coords', 'ocr_written_by_coords', 'ocr_main_content_coords',
                   'ocr_additional_content_coords',
 
-                  'paragraphs_detection_successes', 'ocr_all_text_preprocess', 'ocr_all_text_no_preprocess',
-                  'ocr_main_content_all_text_preprocess', 'ocr_main_content_all_text_no_preprocess',"years"]
+                  'gcp_image_link',	'gcp_folder_link'
+                  ]
 
 PROBLEM_COL_NAMES = DATA_COL_NAMES + [ "error_message"]
 
@@ -143,7 +137,7 @@ def profile(func: Callable) -> Callable:
     return wrapper_profile
 
 
-# @profile
+@profile
 def get_data(problem_files: bool = False) -> pd.DataFrame:
     """Retrieve data from local storage.
 
@@ -164,13 +158,13 @@ def get_data(problem_files: bool = False) -> pd.DataFrame:
     # Removed the duplicated condition
     if os.path.exists(csv_file_path):
         # df = pd.read_csv(csv_file_path,encoding='windows-1255') # in case pd.read without embedding doesnt work
-        df = pd.read_csv(csv_file_path)
+        df = pd.read_csv(csv_file_path,encoding='windows-1255')
         df.fillna('', inplace=True)
     else:
         df = pd.DataFrame(columns=col_names)
     return df
 
-# @profile
+@profile
 def establish_connection() -> GoogleDrive:
     """Establishes connection to Google Drive.
 
@@ -181,7 +175,7 @@ def establish_connection() -> GoogleDrive:
     gauth.LocalWebserverAuth()
     return GoogleDrive(gauth)
 
-# @profile
+@profile
 def find_four_digit_substring(string: str) -> str:
     """Finds a four-digit substring representing a year in a given string.
 
@@ -213,7 +207,7 @@ def find_four_digit_substring(string: str) -> str:
                 return year_group
     return ""
 
-# @profile
+@profile
 def find_cd_label(string: str) -> str:
     """
     Finds a CD label in a given string.
@@ -230,7 +224,7 @@ def find_cd_label(string: str) -> str:
         return match.group()
     return ""
 
-# @profile
+@profile
 def is_path_processed(processed_files_paths: set, path_to_check: str) -> bool:
     """
     Check if a given path is already present in the existing data DataFrame.
@@ -245,7 +239,7 @@ def is_path_processed(processed_files_paths: set, path_to_check: str) -> bool:
     # Check if path_to_check is in the set of paths
     return path_to_check in processed_files_paths
 
-# @profile
+@profile
 def is_image(file_name: str) -> bool:
     """
     Check if the file name provided ends with a '.tif' extension indicating it is an image.
@@ -258,7 +252,7 @@ def is_image(file_name: str) -> bool:
     """
     return file_name.endswith('.tif')
 
-# @profile
+@profile
 def gcp_extract_text_from_image(data: dict[str, any], drive: GoogleDrive) -> dict[str, any]:
     """
     Extracts text from an image using GCP's OCR capabilities.
@@ -276,11 +270,11 @@ def gcp_extract_text_from_image(data: dict[str, any], drive: GoogleDrive) -> dic
     file.GetContentFile("testname")
     # Load the downloaded file into a cv2 image in grayscale
     img = cv2.imread("testname", cv2.IMREAD_GRAYSCALE)
-    processor = ImageProcessor(img)
+    processor = ParagraphDetector(img)
     ocr_meta_data = processor.run()
     return ocr_meta_data
 
-# @profile
+@profile
 def gcp_extract_years_author_type(preprocessed_dirpath: str) -> tuple[str, str, str]:
     """
     Extracts years, author, and type from a preprocessed directory path.
@@ -308,8 +302,8 @@ def gcp_extract_years_author_type(preprocessed_dirpath: str) -> tuple[str, str, 
                 author_subject = preprocessed_str.strip()
     return years, author_subject, type_subject
 
-# @profile
-def is_not_file(string: str) -> bool: # todo: check how fast this is
+@profile
+def is_not_file(string: str) -> bool:
     """
     Check if the given string does not end with any of the file extensions listed in FILE_EXTENSIONS.
 
@@ -321,7 +315,7 @@ def is_not_file(string: str) -> bool: # todo: check how fast this is
     """
     return not any(string.endswith(ext) for ext in FILE_EXTENSIONS)
 
-# @profile
+@profile
 def get_count(df: pd.DataFrame) -> int:
     """
     Get the count of rows in a DataFrame.
@@ -337,7 +331,7 @@ def get_count(df: pd.DataFrame) -> int:
     else:
         return df.shape[0]
 
-# @profile
+@profile
 def gcp_process_files_in_folder(folder_id: str, drive: GoogleDrive, scanned_files_amount_now: int, processed_files_paths: list[str], folder_title: str = "") -> list[tuple[str, str]]:
     """
     Process all files in a given folder on Google Drive, updating processed files and handling reconnections.
@@ -366,6 +360,8 @@ def gcp_process_files_in_folder(folder_id: str, drive: GoogleDrive, scanned_file
     for file in folder_files_list:
         i += 1
         try:
+            if sample_cnt - scanned_files_amount_now > 29: # TODO: Yarin to delete this for test cutoff at 30 added
+                continue
             current_folder_title = folder_title + "\\" + file['title']
             new_row = []
             if is_image(file['title']):
@@ -404,7 +400,7 @@ def gcp_process_files_in_folder(folder_id: str, drive: GoogleDrive, scanned_file
             f"and No Files Saved to Disk after {end_time - start_time} seconds\n")
     return folders_to_process
 
-# @profile
+@profile
 def gcp_reconnect(drive: GoogleDrive) -> None:
     """
     Attempt to reconnect to Google Drive service.
@@ -419,7 +415,7 @@ def gcp_reconnect(drive: GoogleDrive) -> None:
     print(f"Connection attempt failed. Retrying in {60} seconds...")
     time.sleep(60)
 
-# @profile
+@profile
 def create_new_problem_row(current_folder_title: str, e: Exception, file: dict[str, any], new_row: dict[str, any], problem_cnt: int) -> dict[str, any]:
     """
     Create a new row for logging problematic files when exceptions occur during processing.
@@ -449,7 +445,7 @@ def create_new_problem_row(current_folder_title: str, e: Exception, file: dict[s
                         "error_message": str(e)})
     return new_row
 
-# @profile
+@profile
 def gcp_process_file(file_path: str, drive: any, file1: dict[str, any], count: int, folder_title: str) -> pd.DataFrame:
     """
     Process a single file from Google Cloud Platform, extracting meta and OCR data.
@@ -475,11 +471,12 @@ def gcp_process_file(file_path: str, drive: any, file1: dict[str, any], count: i
     new_row["file_name"] = file1['title']
     processed_path = new_row["path"].split("\\")
     processed_path.pop(0)
-    new_row["years"], new_row["author_subject"], new_row["type"] = gcp_extract_years_author_type(processed_path)
+    new_row["years"], new_row["author_folder_name"], new_row["card_catalog_type"] = gcp_extract_years_author_type(processed_path)
     count += 1
-    new_row["Years"] = ""  # this is redundant column we need to remove so in the end of the run will do
     new_row["identifier"] = f"IDGNAZIM000{count}"
-
+    new_row[ 'gcp_image_link']= f"https://drive.google.com/file/d/{new_row['gcp_file_id']}"
+    new_row[ 'gcp_folder_link']=  f"https://drive.google.com/drive/folders/{new_row['gcp_folder_id']}"
+    new_row['is_handwritten'] = ""
     # Process OCR Data From Image
     ocr_meta_data = gcp_extract_text_from_image(new_row, drive)
     # print("-" * 110)
@@ -496,7 +493,7 @@ def gcp_process_file(file_path: str, drive: any, file1: dict[str, any], count: i
 
     return new_row
 
-# @profile
+@profile
 def run() -> None:
     """
     Run the main processing function to iterate over folders and process files from Google Cloud Platform.
@@ -511,7 +508,7 @@ def run() -> None:
     # Initialize Folders root
     folders_to_process = get_folders_queue()
     reconnect_trashold = 600
-    scanned_files_trashold = 2000
+    scanned_files_trashold = 20 # TODO: Yarin added need to delete cutoff is 20
     problem_folders_to_process = []  # Store problematic folders' data here
     data = get_data()
     scanned_files_amount_in_beginning = get_count(data)
@@ -576,7 +573,7 @@ def get_folders_queue():
     folders_queue_col_names = ["folder_id", "files"]
     df = pd.DataFrame(columns=folders_queue_col_names)
     if os.path.exists(csv_folders_queue_path):
-        df = pd.read_csv(csv_folders_queue_path)
+        df = pd.read_csv(csv_folders_queue_path,encoding='windows-1255')
         df.fillna('', inplace=True)
     if not df.empty:
         folders_to_process = [(row['folder_id'], row['files']) for index, row in df.iterrows()]
@@ -585,7 +582,7 @@ def get_folders_queue():
     return folders_to_process
 
 
-# @profile
+@profile
 def write_problem_folder_to_excel(new_problem_row: dict[str, any]) -> None:
     """
     Write problem folder information to an Excel file.
@@ -609,7 +606,7 @@ def write_problem_folder_to_excel(new_problem_row: dict[str, any]) -> None:
         with pd.ExcelWriter('results/gnazim_db_problem_files.xlsx') as writer:
             new_problem_folders.to_excel(writer, index=False, sheet_name='Sheet1')
 
-# @profile
+@profile
 def write_problem_folder_to_csv(new_problem_row: dict[str, any]) -> None:
     """
     Write problem folder information to a CSV file.
@@ -634,6 +631,9 @@ def write_problem_folder_to_csv(new_problem_row: dict[str, any]) -> None:
 
 def create_df_gcp_file_links():
     """
+      * This was created after the 50k run, so it was an after-process fix.
+      Now, it's implemented in the run and no longer necessary.*
+
       Reads a CSV file containing metadata from a specific file path and adds two new columns with generated Google Cloud
       Platform (GCP) file and folder links. The new data is saved to a new CSV file.
 
@@ -673,6 +673,125 @@ def create_df_gcp_file_links():
     # Save the DataFrame to a CSV file
     data.to_csv(file_path, index=False, encoding='windows-1255')  # Set index=False if you don't want to save the indexa=3
 
+def write_empty_csv(file_name, col_names, directory=None):
+    """
+    Writes an empty CSV file with given column names.
+
+    :param file_name: The name of the CSV file to be created.
+    :param col_names: A list of strings representing the column names.
+    :param directory: The directory where the CSV will be saved. (optional)
+    """
+    # Construct the full path
+    if directory:
+        path = os.path.join(directory, file_name)
+    else:
+        path = file_name
+
+    try:
+        # Create directories if they do not exist
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+
+        # Open the file in write mode
+        with open(path, mode='w', newline='', encoding='windows-1255') as file:
+            # Create a CSV writer object
+            writer = csv.DictWriter(file, fieldnames=col_names)
+
+            # Write the header (column names)
+            writer.writeheader()
+
+        print(f"Empty CSV file '{file_name}' created at {path}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
+def create_function_profile_data_plots():
+    """
+      Generates and saves bar plots for function profile data.
+
+      This function reads function profile data from a CSV file, processes it, and
+      generates three bar plots: 1) Number of Calls to Each Function, 2) Total Time
+      Spent in Each Function, and 3) Average Time Per Call for Each Function (excluding 'run').
+      Each plot is saved as a PNG file in the 'outputs' directory with a filename that 
+      includes the date and the type of plot. The plots are also displayed to the screen.
+
+      The data is read from 'results/gnazim_function_profile_data.csv', which is expected to 
+      have columns for 'Total Time', 'Calls', and 'Function Name'. This CSV file is created by
+      profiling functions using a custom `profile` decorator. The `profile` decorator measures 
+      the execution time of each function call and records this data, which is then saved to 
+      the CSV file. 
+
+      The plots are sorted in descending order based on the respective metric (Calls, Total Time, 
+      Average Time).
+
+      Note:
+          - The function assumes the existence of the 'results/gnazim_function_profile_data.csv' 
+            and 'outputs' directory.
+          - The plots are saved with the current date appended to the title.
+          - The CSV data should be generated using the `profile` decorator on functions to capture 
+            their execution time and call count.
+
+      Raises:
+          FileNotFoundError: If 'results/gnazim_function_profile_data.csv' does not exist.
+          OSError: If there's an error in writing the plot images to the 'outputs' directory.
+      """
+    output_dir = 'outputs'
+
+    df = pd.read_csv('results/gnazim_function_profile_data.csv')
+    # Ensuring data types are correct and rounding to two decimal places
+    df['Total Time'] = df['Total Time'].astype(float).round(2)
+    df['Calls'] = df['Calls'].astype(int)
+
+    # Get the current date in the format 'dd.mm.yy'
+    current_date = "_"+str(datetime.now().strftime("%d.%m.%y"))
+
+    # Sort the DataFrame based on 'Calls' for ordering in the plot
+    df_sorted_calls = df.sort_values(by='Calls', ascending=False)
+
+    # Plot 1: Number of Calls to Each Function
+    plt.figure(figsize=(10, 8))
+    sns.barplot(data=df_sorted_calls, x='Calls', y='Function Name', ci=None)
+    title_calls = f'Number_of_Calls_to_Each_Function_Date'
+    plt.title(title_calls+current_date)
+    plt.xlabel('Number of Calls')
+    plt.ylabel('Function Name')
+    plt.tight_layout()
+    plt.savefig(f'{output_dir}/{title_calls}.png')  # Save the figure
+    plt.show()
+    plt.close()
+
+    # Sort the DataFrame based on 'Total Time' for ordering in the plot
+    df_sorted_total_time = df.sort_values(by='Total Time', ascending=False)
+
+    # Plot 2: Total Time Spent in Each Function
+    plt.figure(figsize=(10, 8))
+    sns.barplot(data=df_sorted_total_time, x='Total Time', y='Function Name', ci=None)
+    title_calls = f'Total_Time_Spent_in_Each_Function_Date'
+
+    plt.title(title_calls+current_date)
+    plt.xlabel('Total Time (ms)')
+    plt.ylabel('Function Name')
+    plt.tight_layout()
+    plt.savefig(f'{output_dir}/{title_calls}.png')  # Save the figure
+    plt.show()
+    plt.close()
+
+
+    # Plot 3: Average Time Per Call for Each Function (excluding 'run')
+    df_without_run = df[df['Function Name'] != 'run']  # Removing 'run' function
+    df_without_run['Average Time'] = (df_without_run['Total Time'] / df_without_run['Calls']).round(2)
+
+    # Sort the DataFrame based on 'Average Time' for ordering in the plot
+    df_sorted_average_time = df_without_run.sort_values(by='Average Time', ascending=False)
+    plt.figure(figsize=(10, 8))
+    sns.barplot(data=df_sorted_average_time, x='Average Time', y='Function Name', ci=None)
+    title_calls = f'Average_Time_Per_Call_for_Each_Function_Date'
+    plt.title(title_calls+current_date)
+    plt.xlabel('Average Time Per Call (ms)')
+    plt.ylabel('Function Name')
+    plt.tight_layout()
+    plt.savefig(f'{output_dir}/{title_calls}.png')  # Save the figure
+    plt.show()
+    plt.close()
 
 
 # ************************************************************************************************************************
@@ -682,22 +801,24 @@ if __name__ == "__main__":
     run_start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # Run the main function
+
+    #write_empty_csv("gnazim_db_meta_data.csv",DATA_COL_NAMES,"C:\\Users\\yarin\\PycharmProjects\\DHC\\GnazimProject\\results")
     run()
 
     # Run end timestamp
     run_end_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    create_df_gcp_file_links()
     # Add the run timestamp to the profile data
     for func_data in profile_data.values():
         func_data[2] = run_end_time  # Update the run_timestamp for each function
 
-    # # Convert the profile data to a DataFrame
-    # profile_df = pd.DataFrame.from_dict(profile_data, orient='index', columns=['Total Time', 'Calls', 'Run Timestamp'])
-    # profile_df.sort_values('Total Time', ascending=False, inplace=True)
-    #
-    # # Save to a CSV for later analysis
-    # profile_df.to_csv('results/gnazim_function_profile_data.csv')
-    #
-    # # Display the DataFrame
-    # print(profile_df)
+    # Convert the profile data to a DataFrame
+    profile_df = pd.DataFrame.from_dict(profile_data, orient='index', columns=['Total Time', 'Calls', 'Run Timestamp'])
+    profile_df.sort_values('Total Time', ascending=False, inplace=True)
+
+    # Save to a CSV for later analysis
+    profile_df.to_csv('results/gnazim_function_profile_data.csv')
+
+    # Display the DataFrame
+    print(profile_df)
+    create_function_profile_data_plots()
