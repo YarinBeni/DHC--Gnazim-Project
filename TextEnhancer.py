@@ -1,171 +1,252 @@
-# -*- coding: utf-8 -*-
-
-# https://github.com/NNLP-IL/Hebrew-Resources#optical-character-recognition-ocr
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ USE LLM TO IMPROVE TEXT  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-# from transformers import AutoModelForMaskedLM, AutoTokenizer
-
-
+# # -*- coding: utf-8 -*-
 #
-# tokenizer = AutoTokenizer.from_pretrained('dicta-il/dictabert')
-# model = AutoModelForMaskedLM.from_pretrained('dicta-il/dictabert')
+# # https://github.com/NNLP-IL/Hebrew-Resources#optical-character-recognition-ocr
 #
-# model.eval()
-#
-# sentence = 'בשנת 1948 השלים אפרים קישון את [MASK] בפיסול מתכת ובתולדות האמנות והחל לפרסם מאמרים הומוריסטיים'
-#
-# output = model(tokenizer.encode(sentence, return_tensors='pt'))
-# # the [MASK] is the 7th token (including [CLS])
-# import torch
-# top_2 = torch.topk(output.logits[0, 7, :], 2)[1]
-# print('\n'.join(tokenizer.convert_ids_to_tokens(top_2))) # should print מחקרו / התמחותו
-
-# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-#NO PREPRO 'צלף עלהנ"ל(מספרות מעריב,ספרות.כת אייר .תש '
-#PrePRO '- ;- אל-סיי,חנה כפירא,רות בזרועוה הצלף לֶל הנ ל(מספרות העולם) מעריב,ספרוה,כת אייר תשמו6.6.!1%986 עמ285 / - | '
-
-# from transformers import pipeline
-# # https://huggingface.co/dicta-il/dictabert-heq
-#
-# oracle = pipeline('question-answering', model='dicta-il/dictabert-heq')
+# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ USE LLM TO IMPROVE TEXT  DICTA MODELS:)~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# # # # https://huggingface.co/dicta-il/dictabert-heq
+# # from transformers import AutoModelForMaskedLM, AutoTokenizer
 #
 #
-# context = 'בניית פרופילים של משתמשים נחשבת על ידי רבים כאיום פוטנציאלי על הפרטיות. מסיבה זו הגבילו חלק מהמדינות באמצעות חקיקה את המידע שניתן להשיג באמצעות עוגיות ואת אופן השימוש בעוגיות. ארצות הברית, למשל, קבעה חוקים נוקשים בכל הנוגע ליצירת עוגיות חדשות. חוקים אלו, אשר נקבעו בשנת 2000, נקבעו לאחר שנחשף כי המשרד ליישום המדיניות של הממשל האמריקאי נגד השימוש בסמים (ONDCP) בבית הלבן השתמש בעוגיות כדי לעקוב אחרי משתמשים שצפו בפרסומות נגד השימוש בסמים במטרה לבדוק האם משתמשים אלו נכנסו לאתרים התומכים בשימוש בסמים. דניאל בראנט, פעיל הדוגל בפרטיות המשתמשים באינטרנט, חשף כי ה-CIA שלח עוגיות קבועות למחשבי אזרחים במשך עשר שנים. ב-25 בדצמבר 2005 גילה בראנט כי הסוכנות לביטחון לאומי (ה-NSA) השאירה שתי עוגיות קבועות במחשבי מבקרים בגלל שדרוג תוכנה. לאחר שהנושא פורסם, הם ביטלו מיד את השימוש בהן.'
-# question = 'כיצד הוגבל המידע שניתן להשיג באמצעות העוגיות?'
+# #
+# # tokenizer = AutoTokenizer.from_pretrained('dicta-il/dictabert')
+# # model = AutoModelForMaskedLM.from_pretrained('dicta-il/dictabert')
+# #
+# # model.eval()
+# #
+# # sentence = 'בשנת 1948 השלים אפרים קישון את [MASK] בפיסול מתכת ובתולדות האמנות והחל לפרסם מאמרים הומוריסטיים'
+# #
+# # output = model(tokenizer.encode(sentence, return_tensors='pt'))
+# # # the [MASK] is the 7th token (including [CLS])
+# # import torch
+# # top_2 = torch.topk(output.logits[0, 7, :], 2)[1]
+# # print('\n'.join(tokenizer.convert_ids_to_tokens(top_2))) # should print מחקרו / התמחותו
 #
-# oracle(question=question, context=context)
+# # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# #NO PREPRO 'צלף עלהנ"ל(מספרות מעריב,ספרות.כת אייר .תש '
+# #PrePRO '- ;- אל-סיי,חנה כפירא,רות בזרועוה הצלף לֶל הנ ל(מספרות העולם) מעריב,ספרוה,כת אייר תשמו6.6.!1%986 עמ285 / - | '
+#
+# # from transformers import pipeline
+# #
+# # oracle = pipeline('question-answering', model='dicta-il/dictabert-heq')
+# #
+# #
+# # context = 'בניית פרופילים של משתמשים נחשבת על ידי רבים כאיום פוטנציאלי על הפרטיות. מסיבה זו הגבילו חלק מהמדינות באמצעות חקיקה את המידע שניתן להשיג באמצעות עוגיות ואת אופן השימוש בעוגיות. ארצות הברית, למשל, קבעה חוקים נוקשים בכל הנוגע ליצירת עוגיות חדשות. חוקים אלו, אשר נקבעו בשנת 2000, נקבעו לאחר שנחשף כי המשרד ליישום המדיניות של הממשל האמריקאי נגד השימוש בסמים (ONDCP) בבית הלבן השתמש בעוגיות כדי לעקוב אחרי משתמשים שצפו בפרסומות נגד השימוש בסמים במטרה לבדוק האם משתמשים אלו נכנסו לאתרים התומכים בשימוש בסמים. דניאל בראנט, פעיל הדוגל בפרטיות המשתמשים באינטרנט, חשף כי ה-CIA שלח עוגיות קבועות למחשבי אזרחים במשך עשר שנים. ב-25 בדצמבר 2005 גילה בראנט כי הסוכנות לביטחון לאומי (ה-NSA) השאירה שתי עוגיות קבועות במחשבי מבקרים בגלל שדרוג תוכנה. לאחר שהנושא פורסם, הם ביטלו מיד את השימוש בהן.'
+# # question = 'כיצד הוגבל המידע שניתן להשיג באמצעות העוגיות?'
+# #
+# # oracle(question=question, context=context)
 
 
-# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ USE CONFUSION MATRIX TO IMPROVE TEXT  ~~~~~~~~~~~~~~~~~~~~~~~~~
+# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ END DICTA~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ USE LLM TO IMPROVE TEXT GEMMA 11B:)~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# LINK: https://huggingface.co/yam-peleg/Hebrew-Gemma-11B-Instruct
+
+from transformers import AutoTokenizer, AutoModelForCausalLM
+model_id = "Hebrew-Gemma-11B-Instruct"
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+model = AutoModelForCausalLM.from_pretrained(model_id, device_map="cuda")
+chat = [
+    { "role": "user", "content": "Your custom prompt here in Hebrew or English" },
+]
+prompt = tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
+inputs = tokenizer(prompt, return_tensors="pt")
+outputs = model.generate(**inputs)
+print(tokenizer.decode(outputs[0], skip_special_tokens=True))
+
+# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ END GEMMA ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+# # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ USE CONFUSION MATRIX TO IMPROVE TEXT  ~~~~~~~~~~~~~~~~~~~~~~~~~
+# # # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
 import pandas as pd
 import numpy as np
-from collections import Counter
+import Levenshtein
+import matplotlib.pyplot as plt
+import seaborn as sns
 from main import get_data
 
 
-# preprocess
-df = get_data()
-# Assuming 'df' is your original DataFrame
-# Rename columns
-df_renamed = df.rename(columns={'author_subject': 'GT',
-                                'ocr_writen_on': 'OCR_text',
-                                'ocr_all_text_preprocess': 'OCR_to_fix'})
-# Filter rows where GT is "גורי, חיים" for POC
-# df_filtered = df_renamed[df_renamed['GT'] == " גורי, חיים"]
+class MarkovChainPostOCR:
+    """Class for processing OCR data using Markov Chain techniques.
 
-df_filtered = df_renamed
-df_filtered = df_filtered[["GT","OCR_text","OCR_to_fix"]]
-df_filtered = df_filtered[(df_filtered['GT'] != "") & (df_filtered['OCR_text'] != "")]
+     Attributes:
+         hebrew_alphabet (str): A string of Hebrew alphabet characters.
+         numbers (str): A string of number characters.
+         symbols (str): A string of symbol characters.
+         df (pandas.DataFrame): DataFrame to store and process OCR data.
+         confusion_matrix (pandas.DataFrame): DataFrame to store the confusion matrix.
+     """
+    def __init__(self, get_data=get_data, hebrew_alphabet='אבגדהוזחטיכלמנסעפצקרשת', numbers='0123456789', symbols=', '):
+        """Initializes the MarkovChainPostOCR with given parameters.
 
-import Levenshtein
+            Args:
+                get_data: Function to get the initial data.
+                hebrew_alphabet (str): Hebrew alphabet characters.
+                numbers (str): Number characters.
+                symbols (str): Symbol characters.
+        """
+        self.hebrew_alphabet = hebrew_alphabet
+        self.numbers = numbers
+        self.symbols = symbols
+        self.df = get_data()  # Load data on initialization
+        self.confusion_matrix = self.initialize_confusion_matrix()
 
-# Assuming df_filtered is your DataFrame
-def calculate_levenshtein(row):
-    return Levenshtein.distance(row['GT'], row['OCR_text'])
+    def preprocess_data(self):
+        """Processes the initial data self.df to prepare for analysis."""
+        self.df = self.df.rename(columns={'author_folder_name': 'GT',
+                                          'ocr_written_on': 'OCR_text',
+                                          'ocr_all_text_preprocess': 'OCR_to_fix'})
+        self.df = self.df[["GT", "OCR_text", "OCR_to_fix"]]
+        self.df = self.df[(self.df['GT'] != "") & (self.df['OCR_text'] != "")]
 
-df_filtered['levenshtein_distance'] = df_filtered.apply(calculate_levenshtein, axis=1)
+    def calculate_levenshtein_distance(self):
+        """Calculates Levenshtein distance for each row in the DataFrame."""
+        def calculate_levenshtein(row):
+            return Levenshtein.distance(row['GT'], row['OCR_text'])
 
-df_filtered_high_distance = df_filtered[df_filtered['levenshtein_distance'] < 6]
-df_filtered_equal_length = df_filtered[df_filtered['GT'].str.len() == df_filtered['OCR_text'].str.len()]
+        self.df['levenshtein_distance'] = self.df.apply(calculate_levenshtein, axis=1)
 
-df_filtered_equal_length_and_distance = df_filtered_equal_length[df_filtered['levenshtein_distance'] < 6]
+    def filter_data_on_conditions(self):
+        """Filters the DataFrame based on predefined levenshtein distance conditions."""
+        self.df = self.df[self.df['levenshtein_distance'] < 6]
+        self.df = self.df[self.df['GT'].str.len() == self.df['OCR_text'].str.len()]
+        self.df = self.df[self.df['levenshtein_distance'] < 6]
 
-# Intiliazie Confusion matrix
-hebrew_alphabet = 'אבגדהוזחטיכלמנסעפצקרשת'
-numbers = '0123456789'
-symbols = ', '
-all_chars = hebrew_alphabet + numbers + symbols
-confusion_matrix = pd.DataFrame(np.zeros((len(all_chars), len(all_chars))), index=list(all_chars), columns=list(all_chars))
+    def initialize_confusion_matrix(self):
+        """Initializes the confusion matrix with zeros.
 
+               Returns:
+                   pandas.DataFrame: A DataFrame initialized with zeros.
+       """
+        all_chars = self.hebrew_alphabet + self.numbers + self.symbols
+        return pd.DataFrame(np.zeros((len(all_chars), len(all_chars))), index=list(all_chars),
+                            columns=list(all_chars))
 
-# Function to update confusion matrix
-def update_confusion_matrix(gt, ocr, matrix):
-    for g_char, o_char in zip(gt, ocr):
-        if g_char in all_chars and o_char in all_chars:
-            matrix.loc[g_char, o_char] += 1
+    def update_confusion_matrix(self):
+        """Updates the confusion matrix based on the DataFrame content.
 
-# Iterate over DataFrame rows
-for index, row in df_filtered_equal_length_and_distance.iterrows():
-    update_confusion_matrix(row['GT'], row['OCR_text'], confusion_matrix)
+             Returns:
+                 pandas.DataFrame: The updated confusion matrix.
+        """
+        matrix = self.initialize_confusion_matrix()
+        for index, row in self.df.iterrows():
+            for g_char, o_char in zip(row['GT'], row['OCR_text']):
+                if g_char in matrix.index and o_char in matrix.columns:
+                    matrix.loc[g_char, o_char] += 1
+        return matrix
 
-# Normalize the matrix by row
-confusion_matrix = confusion_matrix.div(confusion_matrix.sum(axis=1), axis=0)
-confusion_matrix.fillna(0, inplace=True)
-# print(confusion_matrix)
+    def normalize_and_clean_matrix(self, matrix):
+        """Normalizes and cleans the confusion matrix.
 
+              Args:
+                  matrix (pandas.DataFrame): The confusion matrix to normalize and clean.
 
-import matplotlib.pyplot as plt
-import seaborn as sns
+              Returns:
+                  pandas.DataFrame: The normalized and cleaned confusion matrix.
+        """
+        matrix_normalized = matrix.div(matrix.sum(axis=1), axis=0)
+        matrix_normalized.fillna(0, inplace=True)
 
-# Plotting the heatmap
-plt.figure(figsize=(15, 15))
-sns.heatmap(confusion_matrix, annot=False, cmap='viridis')
-plt.title('Confusion Matrix Heatmap')
-plt.xlabel('Predicted Characters')
-plt.ylabel('Actual Characters')
-plt.show()
+        matrix_no_zeros = matrix_normalized.loc[~(matrix_normalized == 0).all(axis=1)]
 
+        diagonal_values = np.diagonal(matrix_no_zeros.values)
+        rows_to_drop = matrix_no_zeros.index[diagonal_values > 0.8]
+        matrix_filtered = matrix_no_zeros.drop(rows_to_drop)
 
-# Filter out rows with all zeros
-import numpy as np
+        return matrix_filtered
 
-# Filter out rows with all zeros
-confusion_matrix_no_zeros = confusion_matrix.loc[~(confusion_matrix == 0).all(axis=1)]
+    def plot_heatmap(self, matrix, title):
+        """Plots a heatmap based on the given matrix.
 
-# Filter out rows where the diagonal value is greater than 0.95
-diagonal_values = np.diagonal(confusion_matrix_no_zeros.values)
-rows_to_drop = confusion_matrix_no_zeros.index[diagonal_values > 0.8]
-confusion_matrix_filtered = confusion_matrix_no_zeros.drop(rows_to_drop)
+          Args:
+              matrix (pandas.DataFrame): The matrix to plot.
+              title (str): Title for the heatmap.
+        """
+        plt.figure(figsize=(15, 15))
+        sns.heatmap(matrix, annot=False, cmap='viridis')
+        plt.title(title)
+        plt.xlabel('Predicted Characters')
+        plt.ylabel('Actual Characters')
+        plt.show()
 
-# Plotting the heatmap
-plt.figure(figsize=(15, 15))
-sns.heatmap(confusion_matrix_filtered, annot=False, cmap='viridis')
-plt.title('Confusion Matrix Heatmap')
-plt.xlabel('Predicted Characters')
-plt.ylabel('Actual Characters')
-plt.show()
+    def apply_corrections_to_dataframe(self, df, matrix):
+        """Applies corrections to the DataFrame based on the given matrix.
 
+             Args:
+                 df (pandas.DataFrame): The DataFrame to apply corrections on.
+                 matrix (pandas.DataFrame): The matrix to use for corrections.
 
+             Returns:
+                 pandas.DataFrame: The DataFrame with applied corrections.
+        """
+        df['Corrected_OCR'] = df.apply(lambda row: self.apply_corrections(row, matrix), axis=1)
+        return df
 
+    def apply_corrections(self, row, matrix, max_iterations=10):
+        """Applies corrections to a single row based on the given matrix.
 
-def apply_corrections(row, matrix, max_iterations=10):
-    ocr_text = row['OCR_to_fix']
-    for _ in range(max_iterations):
-        corrected = ""
-        changes_made = False
+           Args:
+               row (pandas.Series): A row from the DataFrame.
+               matrix (pandas.DataFrame): The matrix to use for corrections.
+               max_iterations (int): Maximum number of iterations for corrections.
 
-        for char in ocr_text:
-            if char in matrix.columns:
-                # Identify the most likely correct character
-                likely_char = matrix[char].idxmax()
-                if likely_char != char:
-                    corrected += likely_char
-                    changes_made = True
+           Returns:
+               str: The corrected OCR text.
+        """
+        ocr_text = row['OCR_to_fix']
+        for _ in range(max_iterations):
+            corrected = ""
+            changes_made = False
+
+            for char in ocr_text:
+                if char in matrix.columns:
+                    likely_char = matrix[char].idxmax()
+                    if likely_char != char:
+                        corrected += likely_char
+                        changes_made = True
+                    else:
+                        corrected += char
                 else:
                     corrected += char
-            else:
-                corrected += char
 
-        ocr_text = corrected
+            ocr_text = corrected
+            if not changes_made:
+                break
 
-        # Break if no changes were made in this iteration
-        if not changes_made:
-            break
+        return corrected
 
-    return corrected
+    def run_example(self):
+        """Runs the full example process using class methods."""
+        self.preprocess_data()
+        self.calculate_levenshtein_distance()
+        self.filter_data_on_conditions()
+
+        updated_matrix = self.update_confusion_matrix()
+
+        self.plot_heatmap(updated_matrix, 'Initial Confusion Matrix Heatmap')
+
+        matrix_filtered = self.normalize_and_clean_matrix(updated_matrix)
+        self.plot_heatmap(matrix_filtered, 'Filtered Confusion Matrix Heatmap')
+
+        df_corrected = self.apply_corrections_to_dataframe(self.df, matrix_filtered)
+        print(df_corrected.head())
+
+# example for MarkovChainPostOCR
+# ocr_post_processor = MarkovChainPostOCR(get_data)
+# ocr_post_processor.run_example()
 
 
-
-
-# Apply corrections to each row in the DataFrame
-df_filtered_equal_length_and_distance['Corrected_OCR'] = df_filtered_equal_length_and_distance.apply(lambda row: apply_corrections(row, confusion_matrix_filtered), axis=1)
-print(df_filtered_equal_length_and_distance.head())
