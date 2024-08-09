@@ -23,6 +23,13 @@ To improve the accuracy of our OCR model, we have employed various image process
 In addition to extracting the text from the scanned images, we have also used a pandas dataframe as a data structure for extracting metadata from the Google Cloud folder structures and names. This has allowed us to efficiently organize and analyze the data from the archive, and create a CSV file containing all of the extracted data.
 Overall, the combination of OCR, image processing, and data analysis methods has allowed us to efficiently extract and analyze Hebrew text from the scanned images in the Ganazim Institute archive, providing valuable insights into the history and culture of the Jewish people.
 
+## How to Install
+1. Make Sure You are on the right project directory
+2. run the following command in terminal to install  dependencies:
+  """console
+  pip install -r requirememts.txt
+  """
+
 ## Pseudo Code Logic of main.py
 
 1. **GCP Connection**:
