@@ -24,11 +24,13 @@ In addition to extracting the text from the scanned images, we have also used a 
 Overall, the combination of OCR, image processing, and data analysis methods has allowed us to efficiently extract and analyze Hebrew text from the scanned images in the Ganazim Institute archive, providing valuable insights into the history and culture of the Jewish people.
 
 ## How to Install
-1. Make Sure You are on the right project directory
-2. run the following command in terminal to install  dependencies:
-  """console
-  pip install -r requirememts.txt
-  """
+
+1. Ensure you are in the correct project directory.
+2. Run the following command in your terminal to install the dependencies:
+
+```shell
+pip install -r requirements.txt
+```
 
 ## Pseudo Code Logic of main.py
 
